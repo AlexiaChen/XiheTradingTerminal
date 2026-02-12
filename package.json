@@ -3,6 +3,8 @@
   "displayName": "TradingView Sidebar",
   "description": "TradingView charts in the VS Code sidebar with tabbed layouts, indicator presets, and collapsible controls.",
   "version": "0.0.1",
+  "publisher": "farbodghsemlu", 
+  "repository":"https://github.com/farbodghasemlu/tradingview-vscode.git",
   "engines": {
     "vscode": "^1.108.1"
   },
