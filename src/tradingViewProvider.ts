@@ -441,7 +441,8 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     (function() {
       const vscode = acquireVsCodeApi();
       const initialState = ${serializedState};
-      let state = validateState(initialState);
+      const restoredState = vscode.getState();
+      let state = validateState(restoredState || initialState);
       vscode.setState(state);
 
       const tabsEl = document.getElementById("tabs");
@@ -456,6 +457,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       const container = document.getElementById("container");
 
       let widget = null;
+      let pendingPersistTimer = null;
 
       function validateState(raw) {
         if (!raw || !Array.isArray(raw.tabs) || raw.tabs.length === 0) {
@@ -539,6 +541,27 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
         if (statusPill) {
           statusPill.textContent = "Saved to workspace";
         }
+      }
+
+      function schedulePersistState() {
+        if (pendingPersistTimer) {
+          clearTimeout(pendingPersistTimer);
+        }
+
+        pendingPersistTimer = setTimeout(function() {
+          pendingPersistTimer = null;
+          persistState();
+        }, 120);
+      }
+
+      function flushPendingPersist() {
+        if (!pendingPersistTimer) {
+          return;
+        }
+
+        clearTimeout(pendingPersistTimer);
+        pendingPersistTimer = null;
+        persistState();
       }
 
       function renderTabs() {
@@ -687,6 +710,13 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
         }
       }
 
+      function parseStudiesInput(raw) {
+        return String(raw || "")
+          .split(",")
+          .map(function(value) { return value.trim(); })
+          .filter(function(value) { return value.length > 0; });
+      }
+
       function renderChart() {
         const tab = getActiveTab();
         if (!tab || !container) {
@@ -733,6 +763,16 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       }
 
       if (symbolInput) {
+        symbolInput.addEventListener("input", function() {
+          const tab = getActiveTab();
+          if (!tab) {
+            return;
+          }
+
+          tab.symbol = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT";
+          schedulePersistState();
+        });
+
         symbolInput.addEventListener("change", function() {
           const value = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT";
           updateActiveTab(function(tab) {
@@ -751,11 +791,18 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       }
 
       if (studiesInput) {
+        studiesInput.addEventListener("input", function() {
+          const tab = getActiveTab();
+          if (!tab) {
+            return;
+          }
+
+          tab.studies = parseStudiesInput(studiesInput.value);
+          schedulePersistState();
+        });
+
         studiesInput.addEventListener("change", function() {
-          const studies = studiesInput.value
-            .split(",")
-            .map(function(value) { return value.trim(); })
-            .filter(function(value) { return value.length > 0; });
+          const studies = parseStudiesInput(studiesInput.value);
 
           updateActiveTab(function(tab) {
             tab.studies = studies;
@@ -773,6 +820,14 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
           });
         });
       }
+
+      document.addEventListener("visibilitychange", function() {
+        if (document.hidden) {
+          flushPendingPersist();
+        }
+      });
+
+      window.addEventListener("beforeunload", flushPendingPersist);
 
       renderTabs();
       syncInputs();

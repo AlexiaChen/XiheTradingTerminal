@@ -407,7 +407,8 @@ class TradingViewProvider {
     (function() {
       const vscode = acquireVsCodeApi();
       const initialState = ${serializedState};
-      let state = validateState(initialState);
+      const restoredState = vscode.getState();
+      let state = validateState(restoredState || initialState);
       vscode.setState(state);
 
       const tabsEl = document.getElementById("tabs");
@@ -422,6 +423,7 @@ class TradingViewProvider {
       const container = document.getElementById("container");
 
       let widget = null;
+      let pendingPersistTimer = null;
 
       function validateState(raw) {
         if (!raw || !Array.isArray(raw.tabs) || raw.tabs.length === 0) {
@@ -505,6 +507,27 @@ class TradingViewProvider {
         if (statusPill) {
           statusPill.textContent = "Saved to workspace";
         }
+      }
+
+      function schedulePersistState() {
+        if (pendingPersistTimer) {
+          clearTimeout(pendingPersistTimer);
+        }
+
+        pendingPersistTimer = setTimeout(function() {
+          pendingPersistTimer = null;
+          persistState();
+        }, 120);
+      }
+
+      function flushPendingPersist() {
+        if (!pendingPersistTimer) {
+          return;
+        }
+
+        clearTimeout(pendingPersistTimer);
+        pendingPersistTimer = null;
+        persistState();
       }
 
       function renderTabs() {
@@ -653,6 +676,13 @@ class TradingViewProvider {
         }
       }
 
+      function parseStudiesInput(raw) {
+        return String(raw || "")
+          .split(",")
+          .map(function(value) { return value.trim(); })
+          .filter(function(value) { return value.length > 0; });
+      }
+
       function renderChart() {
         const tab = getActiveTab();
         if (!tab || !container) {
@@ -699,6 +729,16 @@ class TradingViewProvider {
       }
 
       if (symbolInput) {
+        symbolInput.addEventListener("input", function() {
+          const tab = getActiveTab();
+          if (!tab) {
+            return;
+          }
+
+          tab.symbol = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT";
+          schedulePersistState();
+        });
+
         symbolInput.addEventListener("change", function() {
           const value = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT";
           updateActiveTab(function(tab) {
@@ -717,11 +757,18 @@ class TradingViewProvider {
       }
 
       if (studiesInput) {
+        studiesInput.addEventListener("input", function() {
+          const tab = getActiveTab();
+          if (!tab) {
+            return;
+          }
+
+          tab.studies = parseStudiesInput(studiesInput.value);
+          schedulePersistState();
+        });
+
         studiesInput.addEventListener("change", function() {
-          const studies = studiesInput.value
-            .split(",")
-            .map(function(value) { return value.trim(); })
-            .filter(function(value) { return value.length > 0; });
+          const studies = parseStudiesInput(studiesInput.value);
 
           updateActiveTab(function(tab) {
             tab.studies = studies;
@@ -739,6 +786,14 @@ class TradingViewProvider {
           });
         });
       }
+
+      document.addEventListener("visibilitychange", function() {
+        if (document.hidden) {
+          flushPendingPersist();
+        }
+      });
+
+      window.addEventListener("beforeunload", flushPendingPersist);
 
       renderTabs();
       syncInputs();

@@ -14,7 +14,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       "tradingview.sidebar", // MUST match package.json
-      provider
+      provider,
+      {
+        webviewOptions: {
+          retainContextWhenHidden: true
+        }
+      }
     )
   );
 

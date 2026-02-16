@@ -43,7 +43,11 @@ function activate(context) {
     const provider = new tradingViewProvider_1.TradingViewProvider(context.extensionUri, context.workspaceState);
     // Register the sidebar webview
     context.subscriptions.push(vscode.window.registerWebviewViewProvider("tradingview.sidebar", // MUST match package.json
-    provider));
+    provider, {
+        webviewOptions: {
+            retainContextWhenHidden: true
+        }
+    }));
     // Optional: reload command (useful for debugging)
     context.subscriptions.push(vscode.commands.registerCommand("tradingview.reload", () => {
         console.log("🔄 TradingView reload command executed");
