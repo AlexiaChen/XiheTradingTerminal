@@ -1,75 +1,99 @@
 # TradingView Sidebar
 
-Embed TradingView charts directly in the VS Code Activity Bar and keep market context next to your code.
+A chart workspace for VS Code, with named workspaces, independent chart tabs, and a warm Gruvbox palette. Keep market charts beside your code without rebuilding your indicator setup every time you switch tabs.
+
+![Gruvbox Dark workspace with named chart tabs, ZigZag and MA 90](doc/assets/gruvbox-dark.png)
 
 ## Features
 
-- Tabbed chart workspace inside a dedicated VS Code sidebar view.
-- Per-tab chart configuration:
-  - Symbol (`EXCHANGE:TICKER`)
-  - Interval
-  - Indicators/studies list
-  - Light or dark theme
-- Collapsible settings header to maximize chart space.
-- Settings toggle in the same row as chart tabs for fast access.
-- Workspace persistence: tabs and chart settings are restored when you reopen the workspace.
-- TradingView-like styling for a more seamless UI with the embedded widget.
+- **Named workspaces:** group charts by market, strategy, or trading session. Create, switch, rename, and remove workspaces inside the sidebar.
+- **Independent chart tabs:** rename charts with the pencil button or a double-click. Each tab keeps its symbol, interval, theme, and additional indicators.
+- **Indicators ready on open:** every new chart includes **ZigZag (5% deviation, depth 10)** and **Simple Moving Average (90)**. Existing saved indicators are retained when migrating older settings.
+- **Keep charts alive:** switching tabs or workspaces reuses the existing TradingView iframe, preserving indicator adjustments made inside that chart during the session.
+- **Gruvbox Dark and Light:** mist-blue up candles (`#83a598`), wheat-gold down candles (`#d79921`), and matching candle borders, wicks, and backgrounds. The palette follows the sibling `kline-trainer` project.
+- **Collapsible controls:** hide settings to give the chart more space. Layout and controls use Tailwind CSS 4.
+- **Workspace persistence:** chart configuration, names, active selections, and toolbar visibility are saved in the current VS Code project.
 
-## Why This Extension
+<details>
+<summary>Gruvbox Light in a narrow sidebar</summary>
 
-When you are building trading tools, automation, analytics, or just monitoring price action while coding, switching between browser tabs and editor windows adds friction. This extension keeps your chart layout visible where you work.
+<img src="doc/assets/gruvbox-light.png" alt="Gruvbox Light sidebar with ZigZag and MA 90" width="420" />
 
-## Requirements
+</details>
 
-- Visual Studio Code `1.108.1` or newer.
-- Internet access to load the TradingView widget assets.
+Screenshots show the built Webview running in a browser with a preview-only VS Code API shim and the real TradingView hosted chart.
 
-## Installation
+## Install locally
 
-1. Install from the VS Code Marketplace (or package locally).
-2. Open the **TradingView** icon in the Activity Bar.
-3. Use the **Chart** view to start charting.
+Requirements: **VS Code 1.108.1 or newer**, and internet access for TradingView charts.
 
-## Usage
+To build your own installer, use **Node.js 24**:
 
-1. Open the TradingView sidebar view.
-2. Use `+ Chart` to create additional tabs.
-3. Switch tabs to maintain different instruments/setups.
-4. Use **Hide Settings** / **Show Settings** to collapse or expand the header controls.
-5. Update symbol, interval, studies, and theme from the settings panel.
+```bash
+npm install
+npm run package
+```
 
-Changes are automatically saved to workspace state.
+The packaging tool, `@vscode/vsce`, is installed as a local development dependency. No global installation, Marketplace account, or CI run is needed. Packaging builds the extension and Webview with Vite; **it does not run tests**.
 
-## Commands
+The installer is written to:
 
-- `TradingView: Reload Sidebar`
-  - Command ID: `tradingview.reload`
+```text
+dist/tradingview-0.0.2.vsix
+```
 
-## Extension Settings
+In your host machine's VS Code:
 
-This extension currently does not contribute custom VS Code settings.
+1. Open **Extensions**.
+2. Select **… → Install from VSIX…**.
+3. Select the generated `.vsix` file, install it, and reload VS Code if prompted.
+4. Open the **TradingView** icon in the Activity Bar.
 
-## Known Issues
+If you build in WSL and use VS Code on Windows, select the file from the host VS Code installation dialog and install it in the local extension environment.
 
-- TradingView content depends on network availability.
-- Some advanced TradingView capabilities are constrained by the embedded widget API.
-- Symbol availability depends on the data feeds exposed by TradingView.
+## Use the chart workspace
+
+1. Use **+ Workspace** to create a chart workspace, then give it a name. Switch workspaces with the dropdown; use **Rename** to change a name later.
+2. Use **+ Chart** to copy the current chart's configuration into a new tab. Rename a tab with its pencil button or by double-clicking its label.
+3. Set the symbol with TradingView notation, such as `BINANCE:BTCUSDT` or `NASDAQ:AAPL`.
+4. Choose an interval and a Gruvbox theme. ZigZag and MA 90 are included automatically; use **Additional indicators** for supported built-in IDs, such as `RSI@tv-basicstudies`.
+5. Use **Hide Settings** to maximize the chart. At least one workspace and one chart are retained.
+
+**TradingView: Reload Sidebar** rebuilds the view from saved configuration. Its command ID is `tradingview.reload`.
+
+## TradingView capabilities and limits
+
+This extension uses TradingView's official hosted widget, loaded from `s3.tradingview.com/tv.js`. Its available features differ from the full TradingView website.
+
+- **Community Pine scripts:** custom Pine Script indicators and strategies cannot be loaded into this widget. The additional-indicator field accepts supported built-in indicator IDs, not community script names or URLs. See the [official widget FAQ](https://www.tradingview.com/widget-docs/faq/general/).
+- **6h / 8h:** the extension can save and request these intervals, but a real hosted-widget check with `BINANCE:SOLUSDT` on 2026-10-29 fell back to **1D** for both. A warning is shown for these selections. Check the interval inside the chart; actual 6h/8h support remains unresolved.
+- **Indicator persistence:** chart-internal edits survive tab and workspace switches while the Webview remains alive. A full sidebar reload, VS Code restart, or change to symbol/interval/theme/additional indicators recreates the widget. The hosted API does not expose a full chart-layout export here; internal edits are not restored after recreation. The required defaults and indicators entered in the extension toolbar are restored.
+- **Appearance:** TradingView's own menus, toolbars, and individual indicator colors may retain their standard styling. Instrument availability depends on TradingView's feeds and your network.
+
+## Development
+
+The project uses **Vite 8**, **Tailwind CSS 4**, **TypeScript 6**, **Vitest 5**, and **ESLint 10**. Development tooling runs on Node.js 24. The extension targets Node.js 22 and ES2024; the VS Code API typings stay aligned with the minimum supported VS Code version.
+
+```bash
+npm ci                   # install the locked toolchain
+npm run build            # typecheck and build both Vite bundles
+npm run watch            # watch extension and Webview assets
+npm test                 # lint, typecheck, build, and offline regression tests
+npm run package          # build a VSIX, without running tests
+```
+
+Press **F5 → Run Extension** to try the extension in your installed VS Code. Automated checks run offline and do not download or launch a separate VS Code installation.
+
+GitHub Actions runs on pushes, pull requests, and manual dispatch. It installs locked dependencies, runs offline checks and tests, packages the extension, verifies the VSIX contents, and uploads a **tradingview-vsix** artifact. It does not publish to the Marketplace.
+
+`node_modules/`, `out/`, `dist/`, downloaded test installations, and VSIX files are generated locally and excluded from Git. The VSIX includes the compiled extension, Webview JavaScript/CSS, media, README, changelog, license, and screenshots.
+
+Contributor guidance starts at [AGENTS.md](AGENTS.md). Architecture, feature behavior, and validation records are organized in [doc/context](doc/context/README.md).
 
 ## Privacy
 
-The extension persists chart workspace data locally in VS Code workspace state. It does not add telemetry by itself.
+The extension saves its chart configuration locally in VS Code workspace state and adds no telemetry of its own. Embedded charts connect to TradingView under TradingView's own service policies.
 
-## Release Notes
+## License
 
-### 0.0.1
-
-- Initial public release.
-- Added tabbed TradingView sidebar charts.
-- Added workspace persistence for chart tabs and settings.
-- Added collapsible settings header with in-row toggle button.
-- Updated UI styling to better match TradingView widget visuals.
-
-## Contributing
-
-Issues and pull requests are welcome.
-
+[MIT](LICENSE)

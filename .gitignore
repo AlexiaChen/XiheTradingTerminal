@@ -1,2 +1,7 @@
-node_modules
-.vscode
+/node_modules/
+/.vscode/
+/out/
+/dist/
+/.vscode-test/
+*.vsix
+__pycache__/

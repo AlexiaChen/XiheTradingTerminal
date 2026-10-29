@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Lint, typecheck, build and unit tests
+        run: npm test
+      - name: Check whitespace
+        run: git diff --check
+      - name: Build installable VSIX
+        run: npm run package
+      - name: Verify package contents
+        run: python3 scripts/verify_vsix.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tradingview-vsix
+          path: dist/*.vsix
+          if-no-files-found: error
+          retention-days: 14

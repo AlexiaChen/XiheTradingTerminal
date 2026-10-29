@@ -1,0 +1,81 @@
+@import "tailwindcss" source("../");
+
+@theme inline {
+  --color-tv-bg: var(--tv-bg);
+  --color-tv-surface: var(--tv-surface);
+  --color-tv-surface-2: var(--tv-surface-2);
+  --color-tv-border: var(--tv-border);
+  --color-tv-text: var(--tv-text);
+  --color-tv-muted: var(--tv-muted);
+  --color-tv-accent: var(--tv-accent);
+  --color-tv-accent-text: var(--tv-accent-text);
+  --color-tv-danger: var(--tv-danger);
+}
+
+:root {
+  color-scheme: dark;
+  --tv-bg: #1d2021;
+  --tv-surface: #282828;
+  --tv-surface-2: #32302f;
+  --tv-border: #504945;
+  --tv-text: #ebdbb2;
+  --tv-muted: #928374;
+  --tv-accent: #83a598;
+  --tv-accent-text: #1d2021;
+  --tv-danger: #cc241d;
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --tv-bg: #f2e5bc;
+  --tv-surface: #fbf1c7;
+  --tv-surface-2: #ebdbb2;
+  --tv-border: #d5c4a1;
+  --tv-text: #3c3836;
+  --tv-muted: #7c6f64;
+  --tv-accent: #427b58;
+  --tv-accent-text: #fbf1c7;
+  --tv-danger: #9d0006;
+}
+
+@layer base {
+  html, body { @apply m-0 h-full w-full bg-tv-bg text-tv-text font-sans text-[13px] leading-snug; }
+  button { @apply cursor-pointer; }
+  button:disabled { @apply cursor-default opacity-40; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  #app { @apply flex h-screen flex-col gap-2.5 bg-tv-bg p-2.5 max-[700px]:p-2; }
+  .workspace-bar { @apply flex flex-wrap items-center gap-2; }
+  .workspace-bar label { @apply text-[10px] tracking-[0.14em] text-tv-muted; }
+  .workspace-bar select { @apply min-w-32 max-w-64 flex-1; }
+  .workspace-bar button { @apply whitespace-nowrap; }
+  .control-bar { @apply flex min-h-9 items-center justify-between gap-2; }
+  .tabs { @apply flex min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5; scrollbar-width: thin; }
+  .tab { @apply inline-flex shrink-0 items-center rounded-lg border border-tv-border bg-tv-surface; }
+  .tab.active { @apply border-tv-accent bg-tv-accent/15; }
+  .tab-switch { @apply whitespace-nowrap border-0 bg-transparent px-2 py-1.5 text-tv-text hover:text-tv-accent; }
+  .tab-rename { @apply border-0 bg-transparent p-1.5 text-tv-muted hover:text-tv-accent; }
+  .tab-close { @apply border-0 border-l border-tv-border bg-transparent px-2 py-1.5 leading-none text-tv-muted hover:text-tv-danger; }
+  .top-actions { @apply inline-flex shrink-0 items-center gap-1.5; }
+  .tv-btn { @apply rounded-lg border border-tv-border bg-tv-surface px-2.5 py-1.5 text-tv-text transition-colors hover:border-tv-accent; }
+  .tv-btn:focus-visible, .tv-input:focus, .tv-select:focus { @apply border-tv-accent outline-none ring-1 ring-tv-accent/50; }
+  .status-pill { @apply whitespace-nowrap rounded-full border border-tv-border px-2 py-1 text-tv-muted max-[700px]:hidden; }
+  .toolbar { @apply grid grid-cols-4 gap-2.5 rounded-lg border border-tv-border bg-tv-surface p-2.5 max-[900px]:grid-cols-2 max-[700px]:grid-cols-1; }
+  .toolbar.collapsed { @apply hidden; }
+  .stack { @apply flex min-w-0 flex-col gap-1; }
+  .stack label { @apply text-[11px] text-tv-muted; }
+  .tv-input, .tv-select { @apply min-h-8 w-full rounded-md border border-tv-border bg-tv-surface-2 px-2 py-2 text-tv-text; }
+  .segmented { @apply inline-flex min-h-8 overflow-hidden rounded-lg border border-tv-border; }
+  .segmented button { @apply min-w-14 flex-1 border-0 bg-tv-surface-2 px-2 text-tv-text; }
+  .segmented button + button { @apply border-l border-tv-border; }
+  .segmented button.active { @apply bg-tv-accent text-tv-accent-text; }
+  .chart-caption { @apply flex justify-between gap-2 text-[11px] text-tv-muted; }
+  .direction-key { @apply text-tv-accent; }
+  .interval-warning { @apply text-[11px] text-amber-600; }
+  .chart-shell { @apply min-h-56 flex-1 overflow-hidden rounded-lg border border-tv-border bg-tv-surface; }
+  #container, .chart-instance { @apply h-full w-full; }
+  .rename-overlay { @apply fixed inset-0 z-10 grid place-items-center bg-black/60 p-5; }
+  .rename-card { @apply grid w-full max-w-90 gap-3.5 rounded-lg border border-tv-border bg-tv-surface p-5; }
+  .rename-actions { @apply flex justify-end gap-2; }
+}
