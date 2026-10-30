@@ -2,6 +2,11 @@
 
 ## [0.0.4] - 2026-10-30
 
+- Add 30 source-derived TypeScript indicator presets alongside the original 13, with matching category directories for Pine references and TS algorithms. Preserve source attribution, license exceptions, and documented implementation differences.
+- Add category filtering, cross-category overlay selection, applied chips and hover/focus/click usage guides based on the supplied source calculations and author notes.
+- Render source-colored key points, zones, fills, trendlines, volume profiles and compact dashboards through an independent public-API Lightweight Charts primitive adapter; retain the npm library without a fork.
+- Fetch selected auxiliary HTF/LTF streams with pagination, bounded caching and explicit missing-data behavior; document unavailable tick/external-source modes and quote-unit signal simulation.
+
 - Use a searchable multi-select dropdown for built-in indicators, with English/Chinese keyword search, keyboard controls and outside/Escape dismissal; filtering preserves selections.
 - Add a per-chart built-in indicator picker with 13 optional local JS presets: Auto Fib Retracement, EMA Ribbon, Bollinger/Donchian/Keltner Channels, Supertrend, Session VWAP, Volume, RSI, MACD, Stochastic, ATR and Squeeze Momentum.
 - Measure Fibonacci pullbacks on the latest confirmed ZigZag swing, with 0–100% retracement levels and a current retracement percentage; omit extension levels and trading signals.

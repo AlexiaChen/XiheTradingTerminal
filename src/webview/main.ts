@@ -5,6 +5,7 @@ import { ChartCache } from "./chartCache";
 import { createWidgetLoader } from "./widgetLoader";
 import { createLightweightChart } from "./lightweightChart";
 import { IndicatorPicker } from "./indicatorPicker";
+import { IndicatorGuides } from "./indicatorGuides";
 import "./styles.css";
 
 declare function acquireVsCodeApi(): {
@@ -39,6 +40,10 @@ let renameTarget: { kind: "workspace" | "chart"; workspaceId: string; tabId?: st
 let previousFocus: HTMLElement | null = null;
 const indicatorPicker = new IndicatorPicker(element("builtinPicker"), ids => {
   activeTab(state).localIndicators = ids;
+  persist(); render();
+});
+const indicatorGuides = new IndicatorGuides(element("builtinSelected"), id => {
+  activeTab(state).localIndicators = activeTab(state).localIndicators.filter(value => value !== id);
   persist(); render();
 });
 const cache = new ChartCache(element("container"), (tab, id) => {
@@ -163,6 +168,7 @@ function render() {
   }));
   element<HTMLButtonElement>("loadIndicator").disabled = tab.customIndicators.length >= MAX_INDICATORS;
   indicatorPicker.sync(tab.localIndicators, JSON.stringify([workspace.id, tab.id, tab.engine]));
+  indicatorGuides.sync(tab.engine === "lightweight" ? tab.localIndicators : [], JSON.stringify([workspace.id, tab.id, tab.engine]));
   cache.retain(new Set(state.workspaces.flatMap(item => item.tabs.flatMap(chart => ["widget", "lightweight"].map(engine => JSON.stringify([item.id, chart.id, engine]))))));
   showChart();
 }

@@ -127,6 +127,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       <button id="loadIndicator" class="tv-btn" type="button">Load JS Indicator</button>
       <span id="customIndicators" class="indicator-list"></span>
       <span class="local-help">Binance spot · JavaScript indicators · no Pine Script</span>
+      <div id="builtinSelected" class="builtin-selected"></div>
     </div>
     <div id="intervalWarning" class="interval-warning" role="status" hidden>TradingView may fall back to 1D for 6h / 8h. Check the interval inside the chart.</div>
     <div class="chart-shell"><div id="container" role="tabpanel" aria-labelledby="widgetEngine"></div></div>

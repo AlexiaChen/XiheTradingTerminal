@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { BUILTIN_INDICATORS, normalizeLocalIndicators } from "../../src/indicators/catalog";
 import { calculateBuiltin } from "../../src/indicators/builtin";
-import { autoFibRetracement } from "../../src/indicators/builtin/autoFibRetracement";
-import { supertrend } from "../../src/indicators/builtin/supertrend";
-import { sessionVwap } from "../../src/indicators/builtin/sessionVwap";
+import { autoFibRetracement } from "../../src/indicators/builtin/support-resistance/autoFibRetracement";
+import { supertrend } from "../../src/indicators/builtin/trend/supertrend";
+import { sessionVwap } from "../../src/indicators/builtin/volume-order-flow/sessionVwap";
 import { atrValues, emaValues, trueRanges } from "../../src/indicators/math";
 import type { Candle } from "../../src/marketData";
 

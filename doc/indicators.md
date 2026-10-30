@@ -1,5 +1,7 @@
 # Built-in local indicator reference
 
+This page covers the original 13 presets. The additional 30 source-derived presets, categories, guides, licenses and explicit implementation differences are documented in [Pine reference adaptations](pine-indicators.md). Algorithms now live under `src/indicators/builtin/<category>/`; original preset IDs and formulas remain unchanged.
+
 Version 0.0.4 adds 13 optional JavaScript presets to Lightweight Charts. MA90 and ZigZag remain mandatory. The following formulas are implemented independently in this project; the linked TradingView definitions and community work informed the selection and algorithms. No Pine source is embedded or executed.
 
 ## Retracement within one ZigZag swing

@@ -28,6 +28,8 @@ jobs:
         run: npm test
       - name: Check whitespace
         run: git diff --check
+      - name: Verify local documentation links
+        run: python3 scripts/verify_docs.py
       - name: Build installable VSIX
         run: npm run package
       - name: Verify package contents

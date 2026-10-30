@@ -1,0 +1,63 @@
+Pine reference adaptations in XiheTradingTerminal
+===============================================
+
+The following 28 reference scripts carry Copyright (c) LuxAlgo and are licensed
+under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+Legal code: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en
+
+Their source-derived TypeScript adaptations and related source-derived guide
+material retain that attribution and license; they are not relicensed as MIT.
+Changes: Pine defaults reimplemented in TypeScript; declarative drawing output,
+Binance data integration, bounded history/rendering, original-palette handling,
+local explanatory guides, and explicitly documented unsupported/changed behavior.
+There is no endorsement by LuxAlgo or TradingView. The original Pine references
+are in third-party/tradingview-indicator/ in the source repository; they are not
+included in the VSIX. Compiled adaptations are included in the Webview bundle.
+The repository's doc/pine-indicators.md lists per-preset scope and differences.
+
+Attribution, noncommercial use, and ShareAlike conditions apply to adaptations.
+See the license above for the actual terms. Core extension code and independently
+implemented original presets retain their own license; this notice does not
+relicense unrelated files.
+
+LuxAlgo source references (relative to third-party/tradingview-indicator/):
+  trend/evasive_supertrend.pinescript
+  trend/trendline_breakout_navigator.pinescript
+  support-resistance/support_and_resistance_levels_with_breaks.pinescript
+  support-resistance/support_and_resistance_signals_MTF.pinescript
+  support-resistance/support_resistance_pro_toolkit.pinescript
+  support-resistance/pivot_points_high_low_missed_reversal_levels.pinescript
+  support-resistance/breakouts_with_tests_retests.pinescript
+  market-structure/liquidity_sweeps.pinescript
+  market-structure/pure_price_action_liquidity_sweeps.pinescript
+  market-structure/pure_price_action_structures.pinescript
+  market-structure/swing_breakout_sequence.pinescript
+  market-structure/market_structure_break_OB_probability_toolkit.pinescript
+  fvg-ict/FVG_instantaneous_mitigation_signals.pinescript
+  fvg-ict/ICT_unicorn_model.pinescript
+  fvg-ict/pure_price_action_ICT_tools.pinescript
+  fvg-ict/smart_money_concepts.pinescript
+  volume-order-flow/clusters_volume_profile.pinescript
+  volume-order-flow/delta_flow_profile.pinescript
+  volume-order-flow/institutional_order_flow_strength_classifier.pinescript
+  volume-order-flow/liquidity_delta_profiler.pinescript
+  volume-order-flow/liquidity_structure_order_flow.pinescript
+  volume-order-flow/volume_delta_candles.pinescript
+  volume-order-flow/volume_profile_with_node_detection.pinescript
+  volume-order-flow/volumetric_order_flow_structure.pinescript
+  timeframes-sessions/HTF_reversal_divergences.pinescript
+  timeframes-sessions/htf_po3.pinescript
+  timeframes-sessions/ICT_killzones_toolkit.pinescript
+  signal-evaluation/universal_signal_backtester.pinescript
+
+Additional user-supplied references:
+  support-resistance/sellside_buyside_nomada_scalper.pinescript (NomadaScalper)
+  trend/trendlines_breakouts_touches_hold_rate.pinescript (LunqFX)
+These supplied files do not declare a license locally. Their attribution and
+unspecified license status are retained. No MIT license or upstream permission
+is asserted for their reference-derived adaptations. Confirm their provenance
+and redistribution rights before redistributing those portions independently.
+
+The original publication URLs for these 30 scripts are not recorded in the
+supplied files. No publication URL or permission has been invented.

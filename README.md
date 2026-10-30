@@ -6,9 +6,9 @@ Named after **Xihe (羲和)**, the solar goddess associated with time and celest
 
 A chart workspace for VS Code, with named workspaces, independent chart tabs, and a warm Gruvbox palette. Switch between TradingView's hosted Widget and its official open-source **Lightweight Charts 5.2.1**. Local charts support your own JavaScript indicators.
 
-![Lightweight Charts with ETH 4H candles, MA 90, ZigZag and a local EMA 20 indicator](doc/assets/lightweight-dark.png)
+![ETH 4H with MA90, ZigZag, Evasive SuperTrend, S/R zones and liquidity sweeps](doc/assets/lightweight-dark.png)
 
-Overview: named workspaces, chart tabs, engine tabs and Gruvbox candles, with local indicators beside your code.
+Overview: named workspaces and chart/engine tabs, with Gruvbox candles and three source-colored indicator layers applied together.
 
 ![Gruvbox Dark workspace with named chart tabs, ZigZag and MA 90](doc/assets/gruvbox-dark.png)
 
@@ -18,7 +18,8 @@ The hosted Widget engine keeps TradingView's chart controls and drawing tools. B
 
 - **Two chart-engine tabs:** choose **TradingView Widget** or **Lightweight Charts** for each chart. Switching engines preserves both instances; chart and workspace tabs remain independent.
 - **Local JavaScript indicators:** load a `.js` file into a Lightweight chart. Indicator code and names are saved with that chart. Computation runs in a Worker with a two-second limit.
-- **Built-in local indicators:** select from 13 optional presets without writing a file, including Auto Fib Retracement, EMA Ribbon, Bollinger Bands, Supertrend, MACD and Squeeze Momentum. Selections are saved independently for each chart.
+- **43 optional local presets:** 13 original presets plus 30 source-derived Pine adaptations, organized into eight categories. Search and select several across categories; each chart saves its own overlay stack.
+- **Guides and chart annotations:** applied-indicator chips provide hover/focus/click guides based on source calculations and the authors' notes. Source-colored key points, zones, trendlines, profiles and compact statistics appear on the native chart.
 - **Native Binance spot intervals:** local charts load public Binance candles, including real **6h / 8h** bars, with MA(90) and ZigZag(5%, 10). The latest 1,000 bars load initially; the visible chart polls every 15 seconds. Hidden charts pause polling and catch up when shown.
 - **Named workspaces:** group charts by market, strategy, or trading session. Create, switch, rename, and remove workspaces inside the sidebar.
 - **Independent chart tabs:** rename charts with the pencil button or a double-click. Each tab keeps its symbol, interval, theme, and additional indicators.
@@ -80,7 +81,9 @@ Use the **TradingView Widget / Lightweight Charts** tabs to switch engines. Both
 
 ## Built-in local indicators
 
-Select **Lightweight Charts → Built-in Indicators** to open the searchable multi-select dropdown. Search by name, parameters or Chinese keywords (for example, `MACD`, `ATR 10`, `斐波那契` or `布林`), then check the presets you want. Filtering keeps hidden selections intact. Use arrow keys to move through results, Enter in the search box to toggle the first result, and Escape or an outside click to close.
+Select **Lightweight Charts → Built-in Indicators**, choose a category, and check several presets. Search names, parameters or Chinese keywords (`MACD`, `斐波那契`, `流动性`, `订单流`). Category filters and searches keep hidden selections intact, so overlays from different categories remain combined. Use arrow keys through results, Enter in search to toggle the first result, and Escape or an outside click to close.
+
+**Applied** chips list your entire selection. Hover, focus, or click a chip for its basic usage, colors, source attribution and limitations; use × to remove just that preset. Expand **Indicator notes** for current coverage and calculation limits, or a compact dashboard for observed statistics.
 
 MA(90) and ZigZag(5%, 10) stay on; optional presets start off in new charts. Each chart saves its own selections, and copying a chart copies those selections independently.
 
@@ -94,13 +97,32 @@ MA(90) and ZigZag(5%, 10) stay on; optional presets start off in new charts. Eac
 | Supertrend: ATR10 × 3 | Squeeze Momentum: 20, BB2, KC1.5 |
 | Session VWAP: HLC3, UTC day | |
 
-![Built-in indicator picker with automatic Fibonacci retracement and MACD](doc/assets/builtin-indicators.png)
+![Category-filtered multi-select picker with cross-category overlays and annotated price zones](doc/assets/builtin-indicators.png)
 
-Feature view: the searchable dropdown, automatic ZigZag-swing retracement levels, Bollinger Bands and a MACD pane. The dropdown overlays the chart without moving it. Checking presets changes only this local chart; its cached Widget and other charts keep their settings.
+Feature view: the Structure & liquidity category, with a selected Liquidity Sweeps overlay alongside Evasive SuperTrend and S/R Pro from other categories. The dropdown overlays the chart without moving it. Checking presets changes only this local chart; its cached Widget and other charts keep their settings.
 
-**Auto Fib Retracement measures pullback depth within one ZigZag swing.** The swing's endpoint is 0%, its starting point is 100%. Levels are 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6% and 100%; the status line also reports the current retracement percentage. Negative or above-100% readings mean price is outside that swing. This preset has no extension levels, direction predictions or buy/sell signals. Its latest confirmed anchors may change as new swings develop.
+![Selected Liquidity Sweeps chip showing its usage, chart marks, source colors, limits and author](doc/assets/indicator-guide.png)
 
-These are independently implemented JS formulas with fixed, visible presets. Squeeze Momentum follows the public BB/Keltner compression and regression-momentum concept popularized by LazyBear. Session VWAP is intraday-only and omits a truncated first day. See [formulas, initialization and TradingView references](doc/indicators.md) for the full conventions; parity with a particular Pine script is not assumed. Source files live individually in `src/indicators/builtin/`.
+The applied-chip guide explains how to read the marked sweeps and zones. It is available on hover, keyboard focus and click, while the chart remains visible.
+
+**Auto Fib Retracement measures pullback depth within one ZigZag swing.** The swing's endpoint is 0%, its starting point is 100%. Levels are 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6% and 100%; Indicator notes also reports the current retracement percentage. Negative or above-100% readings mean price is outside that swing. This preset has no extension levels, direction predictions or buy/sell signals. Its latest confirmed anchors may change as new swings develop.
+
+The 13 original presets above use independently implemented formulas; see [their numerical conventions](doc/indicators.md). The additional source-derived presets are grouped as follows:
+
+| Category | Examples |
+| --- | --- |
+| Trend & channels | Evasive SuperTrend, Trendline Navigator, Trendlines with Hold Rate |
+| Momentum & volatility | RSI, MACD, Stochastic, ATR, Squeeze Momentum |
+| Support & resistance | S/R Breaks, S/R MTF, S/R Pro, Missed Reversals, NomadaScalper, Tests & Retests |
+| Structure & liquidity | Liquidity Sweeps, Pure Price Action Structures, Swing Breakout Sequence, MSB/OB Score |
+| FVG & ICT | Instantaneous Mitigation, ICT Unicorn, Pure Price Action ICT, Smart Money Concepts |
+| Volume & order flow | Cluster Profiles, Delta Flow, Liquidity Delta/Depth, Volume Delta, Volume Nodes, Volumetric Structure |
+| Timeframes & sessions | HTF Reversal/Divergences, HTF PO3, ICT Killzones |
+| Signal evaluation | Universal Signal Backtester (default EMA9/21 simulation) |
+
+Each algorithm lives in its own TS file under `src/indicators/builtin/<category>/`; the supplied references use matching [category folders](https://github.com/AlexiaChen/XiheTradingTerminal/blob/main/third-party/tradingview-indicator/README.md). The [30-preset guide](doc/pine-indicators.md) documents usage, source colors, default settings and **implementation differences**. These are fixed adaptations of selected default layers, not full Pine or TradingView parity. Optional original inputs/alerts are not all exposed.
+
+The library remains the pinned npm Lightweight Charts package. Our independent adapter uses its public primitives API; there is no maintained fork or core patch. Base candles retain Gruvbox, while indicator graphics follow the source palette where possible. OHLCV-derived delta and profiles are estimates. Lower-timeframe inputs are fetched separately with bounded coverage; missing data produces a visible explanation. Tick reconstruction and external TradingView signal streams are unavailable.
 
 ## Write a local JavaScript indicator
 
@@ -139,7 +161,7 @@ Reinstalling the same extension can restore the VS Code project's saved chart co
 
 This extension uses TradingView's official hosted widget, loaded from `s3.tradingview.com/tv.js`. Its available features differ from the full TradingView website.
 
-- **Pine scripts:** neither engine runs Pine Script or loads community Pine indicators. The Widget's additional-indicator field accepts supported built-in IDs. Local custom indicators use the JavaScript contract above. See the [official widget FAQ](https://www.tradingview.com/widget-docs/faq/general/).
+- **Pine scripts:** neither engine executes Pine Script or imports arbitrary community Pine indicators. The local catalog includes 30 explicit TS adaptations of supplied references. The Widget's additional-indicator field accepts supported built-in IDs; user JS files use the contract above. See the [official widget FAQ](https://www.tradingview.com/widget-docs/faq/general/).
 - **Widget 6h / 8h:** a real hosted-widget check with `BINANCE:SOLUSDT` on 2026-10-29 fell back to **1D** for both. A warning remains for Widget selections. Lightweight Charts uses Binance's native 6h/8h bars; real ETHUSDT API checks on 2026-10-30 confirmed 21,600 / 28,800 seconds between successive bar opens.
 - **Indicator persistence:** chart-internal edits survive tab and workspace switches while the Webview remains alive. A full sidebar reload, VS Code restart, or change to symbol/interval/theme/additional indicators recreates the widget. The hosted API does not expose a full chart-layout export here; internal edits are not restored after recreation. The required defaults and indicators entered in the extension toolbar are restored.
 - **Appearance:** TradingView's own menus, toolbars, and individual indicator colors may retain their standard styling. Instrument availability depends on TradingView's feeds and your network.
@@ -172,6 +194,8 @@ The extension saves chart configuration and loaded JS source locally in VS Code 
 
 ## License
 
-[MIT](LICENSE)
+[MIT for core extension code and independent presets](LICENSE), with source-specific exceptions.
+
+The 28 LuxAlgo-derived presets retain **CC BY-NC-SA 4.0**. The two supplied NomadaScalper/LunqFX references have no local license declaration; no MIT relicensing or upstream permission is asserted. See the bundled [indicator attribution and license notice](third-party/indicator-adaptations-NOTICE.txt) and [per-preset scope](doc/pine-indicators.md).
 
 Bundled [Lightweight Charts](https://github.com/tradingview/lightweight-charts) is licensed under Apache 2.0; its chart attribution remains visible. Third-party licenses and notices are included in [third-party](third-party).

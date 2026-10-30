@@ -86,6 +86,20 @@
   .builtin-close { @apply shrink-0 rounded p-1.5 text-lg text-tv-muted hover:text-tv-text; }
   .builtin-required { @apply my-2 shrink-0 text-[11px] text-tv-muted; }
   .builtin-options { @apply grid min-h-0 gap-1.5 overflow-y-auto; }
+  .builtin-category { @apply mb-2 shrink-0; }
+  .builtin-selected { @apply relative w-full min-w-0; }
+  .builtin-chips { @apply flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto; }
+  .selected-caption { @apply text-[11px] text-tv-muted; }
+  .selected-indicator { @apply inline-flex max-w-full items-center rounded-md border border-tv-border bg-tv-surface; }
+  .indicator-guide-toggle { @apply truncate px-2 py-1 text-[11px] text-tv-accent; }
+  .indicator-guide-toggle:focus-visible { @apply outline outline-tv-accent; }
+  .indicator-guide { @apply absolute top-full left-0 z-30 mt-1.5 max-h-[min(26rem,50vh)] w-[min(34rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-tv-accent bg-tv-surface p-3 text-xs shadow-xl; }
+  .indicator-guide > strong { @apply text-tv-accent; }
+  .indicator-guide p { @apply mt-2 leading-relaxed; }
+  .local-dashboards { @apply flex max-h-28 shrink-0 flex-wrap gap-2 overflow-y-auto px-3 text-[11px]; }
+  .local-dashboards details { @apply rounded border border-tv-border bg-tv-surface px-2 py-1; }
+  .local-dashboards summary { @apply cursor-pointer text-tv-accent; }
+  .local-dashboards td { @apply px-2 py-0.5; }
   .builtin-empty { @apply py-4 text-center text-xs text-tv-muted; }
   .builtin-option { @apply flex cursor-pointer items-start gap-2 rounded-md bg-tv-surface-2 p-2; }
   .builtin-option input { @apply mt-1 shrink-0 accent-tv-accent; }
@@ -98,7 +112,11 @@
   .indicator-remove { @apply ml-1 p-1 hover:text-tv-danger; }
   .local-chart { @apply flex flex-col; }
   .local-legend { @apply flex flex-wrap justify-between gap-2 px-3 pt-2 text-xs text-tv-accent; }
+  .local-legend > span { @apply max-h-8 overflow-y-auto; }
   .local-status { @apply px-3 py-1.5 text-[11px] text-tv-muted break-words; }
+  .local-notices { @apply max-h-32 shrink-0 overflow-y-auto px-3 pb-1.5 text-[11px] text-tv-muted; }
+  .local-notices summary { @apply cursor-pointer text-tv-accent; }
+  .local-notices p { @apply mt-1.5 break-words; }
   .local-canvas { @apply relative min-h-40 flex-1; }
   /* Lightweight Charts injects an inline logo stylesheet, which our CSP blocks.
      Supply the attribution styling through the authorized local stylesheet. */

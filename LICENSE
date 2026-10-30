@@ -19,3 +19,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Scope: the license above applies to the original extension code and independent
+presets. Source-derived indicator adaptations under src/indicators/builtin/ and
+the Pine-specific helper src/indicators/pineSupport.ts retain the source-specific
+terms described in third-party/indicator-adaptations-NOTICE.txt. In particular,
+LuxAlgo-derived portions are CC BY-NC-SA 4.0 and are not covered by this MIT grant.
+The supplied NomadaScalper and LunqFX references do not declare a local license;
+this MIT grant does not assert a license for their reference-derived portions.

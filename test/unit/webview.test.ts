@@ -5,6 +5,7 @@ import { TradingViewProvider } from "../../src/tradingViewProvider";
 import { activeTab, activeWorkspace, normalizeState } from "../../src/chartState";
 import type { TradingViewState } from "../../src/chartState";
 import type { widgetOptions } from "../../src/theme";
+import { BUILTIN_INDICATORS } from "../../src/indicators/catalog";
 
 const localCharts = vi.hoisted(() => [] as { remove: ReturnType<typeof vi.fn>; setVisible: ReturnType<typeof vi.fn> }[]);
 vi.mock("../../src/webview/lightweightChart", () => ({
@@ -115,7 +116,7 @@ describe("terminal Webview interactions", () => {
     expect(document.querySelector<HTMLElement>("#builtinEmpty")!.hidden).toBe(false);
     expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(0);
     query("");
-    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(13);
+    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(BUILTIN_INDICATORS.length);
     expect(document.querySelector<HTMLInputElement>("#builtin-macd")!.checked).toBe(true);
     expect(localCharts).toHaveLength(instances);
     expect(page.instances[0].remove).not.toHaveBeenCalled();
@@ -141,6 +142,36 @@ describe("terminal Webview interactions", () => {
     expect(search.value).toBe("");
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("keeps cross-category overlays selected while category/search changes remain read-only", async () => {
+    const page = await mount(); click("#lightweightEngine"); click("#builtinToggle");
+    const category = document.querySelector<HTMLSelectElement>('[aria-label="Indicator category"]')!;
+    category.value = "market-structure"; category.dispatchEvent(new Event("change"));
+    expect(document.querySelector("#builtin-liquidity-sweeps")!.closest("label")!.hidden).toBe(false);
+    expect(document.querySelector("#builtin-evasive-supertrend")!.closest("label")!.hidden).toBe(true);
+    click("#builtin-liquidity-sweeps");
+    category.value = "trend"; category.dispatchEvent(new Event("change")); click("#builtin-evasive-supertrend");
+    expect(activeTab(page.saved()).localIndicators).toEqual(["evasive-supertrend", "liquidity-sweeps"]);
+    const count = localCharts.length;
+    category.value = "volume-order-flow"; category.dispatchEvent(new Event("change"));
+    expect(localCharts).toHaveLength(count);
+    expect(document.querySelectorAll(".selected-indicator")).toHaveLength(2);
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+  });
+
+  it("shows a selected indicator guide on focus, closes it with Escape, and removes only that overlay", async () => {
+    const page = await mount(); click("#lightweightEngine"); click("#builtinToggle"); click("#builtin-liquidity-sweeps"); click("#builtin-macd");
+    const help = document.querySelector<HTMLButtonElement>('[aria-label="Guide: Liquidity Sweeps"]')!;
+    const instances = localCharts.length; help.focus();
+    const card = document.querySelector<HTMLElement>("#indicatorGuideCard")!;
+    expect(card.hidden).toBe(false); expect(card.textContent).toContain("Only Wicks"); expect(card.textContent).toContain("LuxAlgo");
+    expect(localCharts).toHaveLength(instances);
+    help.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); expect(card.hidden).toBe(true);
+    help.click(); expect(card.hidden).toBe(false);
+    click('[aria-label="Remove Liquidity Sweeps"]');
+    expect(activeTab(page.saved()).localIndicators).toEqual(["macd"]); expect(card.hidden).toBe(true);
+    expect(activeTab(page.saved()).studies).toEqual(expect.arrayContaining(["MASimple@tv-basicstudies", "ZigZag@tv-basicstudies"]));
   });
 
   it("loads a selected JS file through the host and persists its source", async () => {

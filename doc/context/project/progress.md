@@ -1,5 +1,19 @@
 # 当前进度
 
+## 2026-10-30：分类 Pine 衍生预设、绘图适配及叠加指南
+
+用户授权尽可能移植全部30份参考，随后要求 Pine/TS 对齐分类、分类下拉、多选叠加、关键点与悬浮指南，测试、README/Context/截图同步并本地 commit。30份参考已按7类移动，字节与整理前 `26678e9` 完全一致；每份有独立 TS 入口，加上原13项共43项可选预设，UI八类别（包含原震荡指标分类）。稳定ID、默认ETH/4H、折叠Settings、MA90/ZigZag和已有状态保持。
+
+这是源算法衍生的固定预设与选定默认图层，**没有复制全部参数/警报/统计格子或证明TradingView逐点一致**。完整缩减与时序差异见 [英文30项指南](../../pine-indicators.md) 和 [中文架构/功能记录](../features/pine-indicators.md)。尤其SR MTF采用对称区域状态机而不复现原数组边缘行为；HTF reversal统一源周期收盘可用性；Profile Nodes校正峰值矩形对齐；模拟使用报价单位并等待ATR预热。tick、外部TV source和原版可选设置不能冒充支持。
+
+计算返回声明式绘图，通过独立 BuiltinRenderer/IndicatorPrimitive 及公开插件接口处理，不 fork Lightweight Charts 5.2.1，不给指标逻辑暴露原始图表/DOM。辅助数据按选择分页缓存、每流最多12000根；缺失组不代填，绘图每项1500对象上限明确提示。已选chips跨类别保留，hover/focus/click指南说明用途、颜色、作者及局限；搜索/分类/指南不重建图表。真实量/统计评分/回溯锚点区别写入指南。28份LuxAlgo衍生保留CC BY-NC-SA 4.0，另外两份许可本地未声明，不标成MIT原创；NOTICE和英文指南打入VSIX，Pine源码仍排除。
+
+验证：最终 `npm test` 通过 lint、类型检查、双Vite构建和200项回归（11测试文件）。覆盖30项有限绘图/空数据、枢轴时序、量分布守恒、强度公式、MTF分组/缺口、源请求分页/增量/取消、primitive坐标/复用/detach、分类跨类叠加及指南交互。79条本地文档链接与diff检查通过；CI新增文档链接步骤，既有测试/VSIX校验覆盖新资源；workflow YAML及6段shell语法检查通过。
+
+浏览器使用当前bundle和VS Code API替身，真实Binance ETH/4H及5m同时选择全部43项并成功渲染，无横向溢出；4H下Volume Delta如实显示50/1000条覆盖，Nodes有完整360条15m窗口；5m下Delta显示1000/1000，Nodes使用1m，HTF15m形态、1H投影及UTC−5 killzones走有效路径。桌面1440×960与420px浅色窄栏、分类和悬浮指南完成可视检查，5张README截图已全部更新为当前构建。原Widget实际远程K线、MA90、ZigZag也可见；about:blank预览的Widget出现第三方localStorage/origin警告，不能把它当作真实宿主结论。
+
+本地0.0.4 VSIX共24文件，实际身份、bundle、5张截图、两份指南、全部依赖/指标许可说明的字节校验通过；不含Pine、源码、依赖目录或测试。本轮由用户授权commit，不推送、不发布；未下载/启动VS Code，没有远程CI运行结果或用户宿主安装验证。
+
 ## 2026-10-29：0.0.2 功能与工程改造
 
 已完成：

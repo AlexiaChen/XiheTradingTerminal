@@ -8,7 +8,9 @@
 !media/**
 !doc/assets/**
 !doc/indicators.md
+!doc/pine-indicators.md
 !third-party/fancy-canvas-LICENSE.txt
 !third-party/lightweight-charts-LICENSE.txt
 !third-party/lightweight-charts-NOTICE.txt
+!third-party/indicator-adaptations-NOTICE.txt
 !examples/indicators/*.js

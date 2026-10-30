@@ -32,6 +32,8 @@ Chart 增加 `engine: widget | lightweight`（旧数据默认 widget）、`custo
 
 ## 本地 JS
 
+内建扩展已单独接入公开 primitives 绘图、分类预设及辅助 HTF/LTF 数据，见 [Pine 分类及指南](pine-indicators.md)。下面的8 plot /2秒限制仅针对用户选取的JS文件；内建富图形不是给外部脚本开放原始图表接口。
+
 从可信工程主动选择 .js，最多 8 个、每个 64KiB；保存源码快照，不自动监控文件。定义顶层 `calculate(bars)` 返回最多 8 个 plot：name/color/data，可选 type=line|histogram、pane=0|1；点须有限、有序且对应已有 K 线时间。
 
 独立 Blob Worker 解析源码，无 eval/Function，无 Webview DOM/VS Code API；两秒 terminate，隐藏/关闭取消。保持 nonce CSP，仅增加 Binance connect-src 和 blob worker-src，不放开 unsafe-eval。无 import、Node API 或 Pine Script。示例 examples/indicators/ema-20.js；契约见英文 README。
