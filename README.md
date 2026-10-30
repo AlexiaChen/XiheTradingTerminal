@@ -155,6 +155,8 @@ Reinstalling the same extension can restore the VS Code project's saved chart co
 
 **Reconnect Preview** restarts its feed and reloads history while preserving the main chart. **Reload Main Chart** explicitly recreates the hosted iframe and discards unsaved edits inside it. Network errors remain visible. The hosted page needs access to TradingView assets; the extension host needs `wss://widgetdata.tradingview.com`. It honors VS Code's `http.proxy`, then HTTP(S) proxy environment variables. Remote/WSL extension hosts make this connection from their own environment.
 
+For diagnostics, open **View → Output → XiheTradingTerminal**. The log records the host platform, selected proxy source/address, subscription ID, connection/retry failures, history counts, frontend receipt and first completed render. Proxy credentials, raw transport error messages and JS source are not logged; live candle updates do not generate continuous log entries. Initialization failures also appear beside the preview. Version 1.0.1 fixes host messages being rejected when VS Code forwards them from its outer Webview frame; embedded TradingView messages remain excluded by origin.
+
 **XiheTradingTerminal: Reload Sidebar** rebuilds the view from saved configuration. Its command ID is `xihe-trading-terminal.reload`.
 
 ## TradingView capabilities and limits

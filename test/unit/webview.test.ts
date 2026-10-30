@@ -39,7 +39,7 @@ async function mount(initial?: unknown, restored?: unknown, missingLibrary = fal
     html: "", cspSource: "https://webview.test", options: {},
     asWebviewUri: (uri: unknown) => String(uri),
     onDidReceiveMessage: (listener: typeof receive) => { receive = listener; },
-    postMessage: async (message: unknown) => { window.dispatchEvent(new MessageEvent("message", { data: message })); return true; }
+    postMessage: async (message: unknown) => { window.dispatchEvent(new MessageEvent("message", { origin: window.origin, source: {} as Window, data: message })); return true; }
   };
   const provider = new TradingViewProvider({} as vscode.Uri, host);
   provider.resolveWebviewView({ webview } as unknown as vscode.WebviewView, {} as vscode.WebviewViewResolveContext, {} as vscode.CancellationToken);
@@ -84,7 +84,7 @@ function rename(name: string) {
   document.querySelector<HTMLFormElement>("#renameForm")!.dispatchEvent(new Event("submit", { cancelable: true }));
 }
 
-beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localCharts.length = 0; observers.length = 0; });
+beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.stubGlobal("origin", "https://webview.test"); vi.restoreAllMocks(); localCharts.length = 0; observers.length = 0; });
 
 describe("terminal Webview interactions", () => {
   it("resets observed context after main recreation and waits for its fresh confirmation", async () => {
@@ -275,11 +275,22 @@ describe("terminal Webview interactions", () => {
     const page = await mount();
     const workspace = activeWorkspace(page.state());
     const tab = activeTab(page.state());
-    window.dispatchEvent(new MessageEvent("message", { data: { type: "indicatorLoaded", workspaceId: workspace.id, tabId: tab.id, name: "EMA 20.js", source: "function calculate(bars) { return []; }" } }));
+    window.dispatchEvent(new MessageEvent("message", { origin: window.origin, source: {} as Window, data: { type: "indicatorLoaded", workspaceId: workspace.id, tabId: tab.id, name: "EMA 20.js", source: "function calculate(bars) { return []; }" } }));
     expect(activeTab(page.saved()).customIndicators[0].name).toBe("EMA 20.js");
     expect(page.instances).toHaveLength(1);
 
     expect(activeTab(page.saved()).customIndicators).toHaveLength(1);
+  });
+  it("rejects a Widget frame spoofing a host indicator import or workspace removal", async () => {
+    const page = await mount();
+    click("#addWorkspace");
+    const workspace = activeWorkspace(page.state()), tab = activeTab(page.state());
+    for (const data of [
+      { type: "indicatorLoaded", workspaceId: workspace.id, tabId: tab.id, name: "injected.js", source: "function calculate() { return []; }" },
+      { type: "removeWorkspace", workspaceId: workspace.id }
+    ]) { window.dispatchEvent(new MessageEvent("message", { origin: "https://s.tradingview.com", source: {} as Window, data })); }
+    expect(activeTab(page.saved()).customIndicators).toHaveLength(0);
+    expect(page.saved().workspaces).toHaveLength(2);
   });
 
   it("can create charts and workspaces when randomUUID is unavailable", async () => {

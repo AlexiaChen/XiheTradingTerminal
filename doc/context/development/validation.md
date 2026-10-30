@@ -11,11 +11,13 @@ python3 scripts/verify_vsix.py
 git diff --check
 ```
 
-npm ci 用于从锁文件安装；npm install 满足日常本地安装。打包工具是本地 devDependency，无需全局 vsce。package 通过 vsce 的 vscode:prepublish 运行 build，不运行测试；输出 dist/xihe-trading-terminal-1.0.0.vsix。
+npm ci 用于从锁文件安装；npm install 满足日常本地安装。打包工具是本地 devDependency，无需全局 vsce。package 通过 vsce 的 vscode:prepublish 运行 build，不运行测试；输出 dist/xihe-trading-terminal-1.0.1.vsix。
 
 build 先 tsc --noEmit，再 Vite 构建扩展 CJS 与 Webview IIFE/CSS。watch 先完成两个构建，再启动不清空目录的双 watcher，避免一侧删除另一侧产物。
 
 ## 自动测试
+
+1.0.1共15文件220项离线回归，新增同源父frame/跨源拒绝、前端接收及首次绘图确认、错误去重与代理/transport日志脱敏。真实浏览器还以原生父frame `postMessage`重现旧构建丢弃行情、状态为空；原先合成无source消息的替身不能发现此问题。修复验证仍是浏览器+VS Code API替身，不等于用户Windows宿主新包已安装。
 
 1.0.0的Vitest共14文件、212项离线回归，包含状态迁移、默认指标、两图同时展示/主图保留、选择器与指南、JS信任/导入/Worker边界，以及Widget帧解码/索引修订、同根增量、断线重载、静默超时、主/辅助实际源、隐藏恢复和旧ID隔离。DOM用happy-dom、Widget替身；网络用可控socket替身，不证明真实远端。真实网络另由当前构建+VS Code API预览替身验证。
 

@@ -2,7 +2,7 @@
   "name": "xihe-trading-terminal",
   "displayName": "XiheTradingTerminal",
   "description": "A Gruvbox chart terminal with TradingView and Lightweight Charts, named workspaces, and local JavaScript indicators.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "AlexiaChen",
   "repository": "https://github.com/AlexiaChen/XiheTradingTerminal.git",
   "engines": {

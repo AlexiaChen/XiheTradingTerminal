@@ -1,10 +1,11 @@
 import WebSocket from "ws";
 import { HttpsProxyAgent } from "https-proxy-agent";
+import { transportError, type FeedLogger } from "../feedDiagnostics";
 import { AUX_INTERVALS, object, WidgetFrameDecoder, widgetCommand, widgetFrame, WidgetSeries, type FeedEvent, type FeedRequest, type SymbolInfo, type WireCandle } from "./widgetProtocol";
 
 const ENDPOINT = "wss://widgetdata.tradingview.com/socket.io/websocket?from=widgetembed%2F&api_key=tradingview";
 type Stream = { resolution: string; session: string; series: WidgetSeries; ready: boolean; info: SymbolInfo; changes: Map<number, WireCandle>; reset: boolean };
-export type FeedOptions = { proxy?: string; createSocket?: () => WebSocket };
+export type FeedOptions = { proxy?: string; createSocket?: () => WebSocket; log?: FeedLogger };
 
 /** Read-only, anonymous Widget feed. No accounts, cookies, private entitlements or order methods. */
 export class WidgetFeed {
@@ -24,6 +25,7 @@ export class WidgetFeed {
     if (this.stopped) { return; }
     this.emit({ kind: "status", state: this.attempts ? "reconnecting" : "connecting", message: "Connecting to the hosted Widget feed…" });
     this.streams.clear(); this.dirty.clear();
+    this.options.log?.(`Socket connecting attempt=${this.attempts + 1}`);
     const decoder = new WidgetFrameDecoder();
     let socket: WebSocket;
     try {
@@ -31,11 +33,13 @@ export class WidgetFeed {
         origin: "https://s.tradingview.com", handshakeTimeout: 15_000, maxPayload: 4_000_000,
         ...(this.options.proxy ? { agent: new HttpsProxyAgent(this.options.proxy) } : {})
       });
-    } catch { this.retry("Could not open the Widget connection. Check the VS Code HTTP proxy."); return; }
+    } catch (error) { this.retry(`Could not open the Widget connection (${transportError(error)}). Check the VS Code HTTP proxy.`); return; }
     this.socket = socket;
     this.lastReceived = Date.now();
+    let failure = "";
     socket.on("open", () => {
       if (this.stopped || socket !== this.socket) { return; }
+      this.options.log?.("Socket open; anonymous authentication and history request");
       this.send("set_auth_token", ["unauthorized_user_token"]);
       this.subscribe("main", this.request.interval, 1000);
     });
@@ -52,12 +56,19 @@ export class WidgetFeed {
         socket.terminate();
       }
     });
-    socket.on("error", () => { /* close owns reconnection; never expose proxy credentials in transport errors. */ });
-    socket.on("close", () => {
-      if (socket === this.socket && !this.stopped) { this.retry("Widget feed disconnected. Reconnecting and reloading history…"); }
+    socket.on("error", error => {
+      if (this.stopped || socket !== this.socket) { return; }
+      failure = transportError(error);
+      this.options.log?.(`Socket error: ${failure}`);
+    });
+    socket.on("close", (code: number) => {
+      if (socket === this.socket && !this.stopped) {
+        this.options.log?.(`Socket closed code=${code ?? "unknown"}`);
+        this.retry(`Widget feed disconnected${failure ? ` (${failure})` : ""}. Reconnecting and reloading history…`);
+      }
     });
     this.watchdog = setInterval(() => {
-      if (Date.now() - this.lastReceived > 45_000) { socket.terminate(); }
+      if (Date.now() - this.lastReceived > 45_000) { failure = "No Widget messages for 45 seconds"; this.options.log?.(failure); socket.terminate(); }
     }, 10_000);
   }
 
@@ -127,7 +138,9 @@ export class WidgetFeed {
     this.dirty.clear();
     this.emit({ kind: "status", state: "reconnecting", message });
     clearTimeout(this.reconnectTimer);
-    this.reconnectTimer = setTimeout(() => this.connect(), Math.min(30_000, 1000 * 2 ** Math.min(this.attempts++, 5)));
+    const delay = Math.min(30_000, 1000 * 2 ** Math.min(this.attempts++, 5));
+    this.options.log?.(`Retry in ${delay}ms`);
+    this.reconnectTimer = setTimeout(() => this.connect(), delay);
   }
   dispose() {
     this.stopped = true;

@@ -2,15 +2,16 @@ import * as vscode from "vscode";
 import { DEFAULT_SYMBOL, LEGACY_STATE_KEY, MAX_INDICATOR_BYTES, normalizeState, STATE_KEY } from "./chartState";
 import { WidgetFeed } from "./marketData/widgetFeed";
 import { validFeedRequest } from "./marketData/widgetProtocol";
+import { diagnosticText, proxyDescription } from "./feedDiagnostics";
 
 export class TradingViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
   private feed?: WidgetFeed;
   private feedId?: string;
 
-  dispose() { this.feed?.dispose(); this.feed = undefined; this.feedId = undefined; }
+  dispose() { if (this.feedId) { this.log?.info(`[${this.feedId}] Subscription stopped`); } this.feed?.dispose(); this.feed = undefined; this.feedId = undefined; }
 
-  constructor(private readonly extensionUri: vscode.Uri, private readonly workspaceState: vscode.Memento) {}
+  constructor(private readonly extensionUri: vscode.Uri, private readonly workspaceState: vscode.Memento, private readonly log?: Pick<vscode.LogOutputChannel, "info" | "warn" | "error">) {}
 
   public reload(): void {
     this.dispose();
@@ -19,10 +20,12 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
 
   public resolveWebviewView(view: vscode.WebviewView, _context: vscode.WebviewViewResolveContext, _token: vscode.CancellationToken) {
     this.view = view;
+    this.log?.info("Webview resolved");
     view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
     view.webview.html = this.getHtml(view.webview);
     view.onDidDispose?.(() => this.dispose());
     view.onDidChangeVisibility?.(() => {
+      this.log?.info(`Webview visible=${view.visible}`);
       if (!view.visible) { this.dispose(); }
       else { void view.webview.postMessage({ type: "previewResume" }); }
     });
@@ -30,16 +33,32 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       if (message?.type === "previewSubscribe") {
         const request = validFeedRequest(message);
         if (!request) {
+          this.log?.warn("Rejected invalid preview subscription");
           if (typeof message.id === "string") { void view.webview.postMessage({ type: "previewFeed", id: message.id, event: { kind: "status", state: "error", message: "Unsupported preview symbol or timeframe. Use minute intervals, 1D or 1W; complex expressions and other resolutions are unavailable." } }); }
           return;
         }
         if (view.visible === false) { return; }
         this.dispose(); this.feedId = request.id;
         const configuredProxy = vscode.workspace.getConfiguration?.("http").get<string>("proxy");
-        const proxy = configuredProxy || process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+        const environmentProxy = ["HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"].find(key => process.env[key]);
+        const proxy = configuredProxy || (environmentProxy ? process.env[environmentProxy] : undefined);
+        this.log?.info(`[${request.id}] Subscribe symbol=${request.symbol} interval=${request.interval} auxiliary=${request.auxiliary.join(",") || "none"} proxySource=${configuredProxy ? "http.proxy" : environmentProxy ?? "none"} proxy=${proxyDescription(proxy)}`);
         this.feed = new WidgetFeed(request, event => {
-          if (this.feedId === request.id) { void view.webview.postMessage({ type: "previewFeed", id: request.id, event }); }
-        }, { proxy });
+          if (this.feedId === request.id) {
+            if (event.kind === "status") { this.log?.info(`[${request.id}] ${event.state}: ${event.message}`); }
+            if (event.kind === "series" && event.reset) { this.log?.info(`[${request.id}] History resolution=${event.resolution} bars=${event.bars.length} source=${event.info.symbol} interval=${event.info.interval} status=${event.info.status}`); }
+            void view.webview.postMessage({ type: "previewFeed", id: request.id, event }).then(delivered => {
+              if (!delivered && this.feedId === request.id) { this.log?.warn(`[${request.id}] Webview delivery failed`); }
+            }, () => { this.log?.warn(`[${request.id}] Webview delivery rejected`); });
+          }
+        }, { proxy, log: message => this.log?.info(`[${request.id}] ${message}`) });
+      } else if (message?.type === "previewDiagnostic" && message.id === this.feedId) {
+        if (message.stage === "received" || message.stage === "rendered") {
+          const bars = Number.isInteger(message.bars) && message.bars >= 0 && message.bars <= 12_000 ? message.bars : "invalid";
+          this.log?.info(`[${this.feedId}] Frontend ${message.stage} resolution=${diagnosticText(message.resolution ?? "main")} bars=${bars}`);
+        } else if (message.stage === "renderError") { this.log?.error(`[${this.feedId}] Frontend render error: ${diagnosticText(message.message)}`); }
+      } else if (message?.type === "previewInitializationError") {
+        this.log?.error(`Frontend initialization error: ${diagnosticText(message.message)}`);
       } else if (message?.type === "previewStop") {
         if (message.id === this.feedId) { this.dispose(); }
       } else if (message?.type === "persist" && message.state) {
@@ -165,6 +184,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       </section>
       <section class="chart-panel" aria-label="Local indicator preview">
         <div class="panel-heading"><strong>Lightweight · Indicator Preview</strong><span>Same Widget feed · local calculations</span></div>
+        <div id="previewNotice" class="chart-notice" role="status" hidden></div>
         <div class="chart-shell"><div id="previewContainer"></div></div>
       </section>
     </div>

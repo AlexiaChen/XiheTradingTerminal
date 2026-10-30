@@ -2,6 +2,8 @@
 
 ## 1.0.0：同时展示与原生 Widget 行情
 
+1.0.1补充：宿主同源外层frame转发的消息不再被self来源判断误拒绝，Preview初始化时立即显示Connecting；初始化失败在本区域提示。Output选择XiheTradingTerminal可沿同一订阅ID查看代理选择、连接/重连、History、Frontend received及Frontend rendered，区分网络、IPC和前端计算/绘图。前端接收允许Webview同源消息、拒绝TradingView跨源消息；JS导入及工作区删除回执共用此校验。
+
 用户要求主图与指标预览同时展示，并删除 Binance API。现在宽屏并排、窄栏上下；旧 engine 字段只保留兼容，workspace/chart/engine 缓存身份仍保持。主图只因明确配置变化或 Reload Main Chart 重建，预览选项不会破坏主图内部编辑。Reconnect Preview 只重连本地预览。
 
 行情由扩展宿主的 `WidgetFeed` 使用 ws + HTTPS 代理客户端匿名订阅 `widgetdata.tradingview.com`，无需 Chromium/CDP、账号、cookie或密钥。它是同一服务的独立订阅，不是跨域读取 iframe，也不是官方行情API。主图通过 tv.js 的 ready/getSymbolInfo/subscribeToQuote 消息报告实际标的和周期；预览跟随并显示实际来源/延迟。平移、十字线、画线不联动；主图未确认时明确显示跟随 Settings。

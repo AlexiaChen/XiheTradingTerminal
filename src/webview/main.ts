@@ -8,6 +8,7 @@ import { IndicatorPicker } from "./indicatorPicker";
 import { IndicatorGuides } from "./indicatorGuides";
 import { observeWidget, type HostedWidget } from "./widgetObserver";
 import "./styles.css";
+import { isHostMessage } from "./hostMessages";
 
 declare function acquireVsCodeApi(): {
   getState(): unknown;
@@ -97,7 +98,13 @@ function showPreview(retry = false) {
   try {
     if (retry) { previewCache.retry(workspace.id, preview); }
     else { previewCache.show(workspace.id, preview); }
-  } catch (error) { chartNotice(error instanceof Error ? error.message : String(error)); }
+    element("previewNotice").hidden = true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    element("previewNotice").textContent = `Indicator preview: ${message}`;
+    element("previewNotice").hidden = false;
+    vscode.postMessage({ type: "previewInitializationError", message });
+  }
 }
 
 function persist() {
@@ -249,7 +256,7 @@ element("closeWorkspace").addEventListener("click", () => {
   vscode.postMessage({ type: "confirmRemoveWorkspace", workspaceId: activeWorkspace(state).id, name: activeWorkspace(state).name });
 });
 window.addEventListener("message", event => {
-  if (event.source && event.source !== window) { return; }
+  if (!isHostMessage(event)) { return; }
   if (event.data?.type === "indicatorLoaded") {
     const workspace = state.workspaces.find(item => item.id === event.data.workspaceId);
     const tab = workspace?.tabs.find(item => item.id === event.data.tabId);

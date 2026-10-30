@@ -1,5 +1,15 @@
 # 当前进度
 
+## 2026-10-30：1.0.1 修复真实 Webview 行情消息过滤并增加诊断
+
+用户反馈Windows宿主Preview空白、只有固定标题，授权修复和增加日志。只读检查宿主17:11:39的Extension Host日志确认1.0.0在Windows本地激活，配置http.proxy为127.0.0.1:7897，已安装两个bundle与checkout字节一致。用Windows VS Code自带Node 24.22.1执行已安装行情代码、同一代理成功取得ETH/4H 1000根；这不是运行中Webview收数或绘图成功的证据。
+
+根因证据：用户安装的VS Code外层Webview通过同源frame `postMessage`转发宿主消息，注入脚本又遮蔽window.parent；旧`event.source !== window`判断会丢弃合法消息。原生嵌套浏览器在旧构建收到SOL/4H行情与状态，但sourceSelf=false，Preview状态始终为空。1.0.1改为共用origin校验，继续拒绝TradingView跨源消息；行情恢复、JS导入和删除确认回执一并修复。默认配置、已保存SOL/4H及主图缓存行为保持。
+
+新增XiheTradingTerminal LogOutputChannel：激活宿主平台/版本/remote、代理来源与脱敏地址、订阅ID、socket连接/关闭/错误/退避、历史根数/实际源、Webview投递失败、前端首次接收与首次完整计算/数据提交确认；不逐根行情刷日志，不记录代理凭据、raw transport错误或JS源。初始化立即显示Connecting，初始化错误在Preview旁显示，绘图错误去重后上报。前端rendered只证明本地绘图调用完成，不代表GPU或用户宿主安装验证。
+
+验证：npm test通过lint、类型检查、双Vite构建、15文件220项离线回归。当前构建在原生父子frame消息+VS Code API替身中显示真实SOL/4H 1000根、MA90、ZigZag和ICT Unicorn，首次received/rendered日志均存在，同源父消息sourceSelf仍为false；截图为`/tmp/xihe-1.0.1-parent-message-fixed.png`，左侧托管主图在此嵌套预览中空白，不能算主图或真实VS Code宿主验证。1.0.1 VSIX共62文件约7.96MB，包内身份、bundle/截图字节、许可及排除项验证通过，130条文档链接和diff检查通过。不下载/启动VS Code、不执行宿主烟测；新包尚未安装至用户Windows宿主，无远程CI、不提交/推送/发布。
+
 ## 2026-10-30：1.0.0 主图与指标预览同时展示
 
 用户明确要求从调研推进到完整插件、持续同步、删除Binance API、升级1.0.0，并要求README少量典型图、独立Built-in Indicator Showcase。托管主图和Lightweight预览现宽屏并排、窄栏上下；主图内部标的/实际周期通过消息跟随，保留缓存实例与旧工作区。原engine字段保留兼容但不切换显示。

@@ -11,9 +11,10 @@ const bars = Array.from({ length: 100 }, (_, i) => ({ time: 1000 + i * 60, open:
 let messages: Record<string, unknown>[];
 const send = (message: unknown) => { messages.push(message as Record<string, unknown>); };
 function receive(event: FeedEvent, id = String(messages.filter(m => m.type === "previewSubscribe").at(-1)?.id)) {
-  window.dispatchEvent(new MessageEvent("message", { data: { type: "previewFeed", id, event } }));
+  window.dispatchEvent(new MessageEvent("message", { origin: window.origin, source: {} as Window, data: { type: "previewFeed", id, event } }));
 }
 beforeEach(() => {
+  vi.stubGlobal("origin", "https://webview.test");
   vi.useFakeTimers(); messages = [];
   chart.addSeries.mockClear(); chart.remove.mockClear();
   document.body.innerHTML = '<div id="local"></div>';
@@ -28,17 +29,48 @@ describe("streamed indicator preview", () => {
     const tab = activeTab(normalizeState(undefined)); tab.symbol = "NASDAQ:AAPL"; tab.interval = "D";
     tab.localIndicators = ["bollinger", "macd", "supertrend", "squeeze"];
     const view = createLightweightChart(tab, "local", true, send);
+    expect(document.querySelector(".local-status")!.textContent).toContain("Connecting");
     receive({ kind: "series", resolution: "main", reset: true, bars, info });
     await vi.advanceTimersByTimeAsync(100);
     expect(chart.addSeries).toHaveBeenCalledTimes(13);
     expect(document.querySelector(".local-legend")!.textContent).toContain("BATS_DLY:AAPL");
     expect(document.querySelector(".local-status")!.textContent).toContain("delayed 15 min");
     const candle = chart.addSeries.mock.results[0].value;
+    expect(messages.filter(m => m.type === "previewDiagnostic")).toEqual([
+      expect.objectContaining({ stage: "received", resolution: "main", bars: 100 }),
+      expect.objectContaining({ stage: "rendered", bars: 100 })
+    ]);
     receive({ kind: "series", resolution: "main", reset: false, bars: [{ ...bars.at(-1)!, close: 101 }], info });
     await vi.advanceTimersByTimeAsync(100);
     expect(candle.setData.mock.lastCall[0]).toHaveLength(100);
     expect(candle.setData.mock.lastCall[0].at(-1).close).toBe(101);
     expect(chart.addSeries).toHaveBeenCalledTimes(13); expect(fetch).not.toHaveBeenCalled(); view.remove();
+    expect(messages.filter(m => m.type === "previewDiagnostic")).toHaveLength(2);
+  });
+  it("rejects cross-origin Widget messages, including resume, while accepting host-parent messages", async () => {
+    const view = createLightweightChart(activeTab(normalizeState(undefined)), "local", true, send);
+    const id = messages.find(m => m.type === "previewSubscribe")!.id;
+    for (const data of [{ type: "previewFeed", id, event: { kind: "series", resolution: "main", reset: true, bars, info } }, { type: "previewResume" }]) {
+      window.dispatchEvent(new MessageEvent("message", { origin: "https://s.tradingview.com", source: {} as Window, data }));
+    }
+    await vi.advanceTimersByTimeAsync(100);
+    expect(chart.addSeries.mock.results[0].value.setData).not.toHaveBeenCalled();
+    expect(messages.filter(m => m.type === "previewSubscribe")).toHaveLength(1);
+    receive({ kind: "series", resolution: "main", reset: true, bars, info });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(chart.addSeries.mock.results[0].value.setData).toHaveBeenCalledOnce();
+    view.remove();
+  });
+  it("logs a render failure once instead of repeating it on every live update", async () => {
+    const view = createLightweightChart(activeTab(normalizeState(undefined)), "local", true, send);
+    chart.addSeries.mock.results[0].value.setData.mockImplementation(() => { throw new Error("Invalid candle"); });
+    for (let index = 0; index < 2; index++) {
+      receive({ kind: "series", resolution: "main", reset: true, bars, info });
+      await vi.advanceTimersByTimeAsync(100);
+    }
+    expect(document.querySelector(".local-status")!.textContent).toContain("Invalid candle");
+    expect(messages.filter(m => m.stage === "renderError")).toEqual([expect.objectContaining({ message: "Invalid candle" })]);
+    view.remove();
   });
   it("stops hidden subscriptions, reloads on resume and rejects stale replies", async () => {
     const view = createLightweightChart(activeTab(normalizeState(undefined)), "local", true, send);

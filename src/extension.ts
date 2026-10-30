@@ -2,12 +2,14 @@ import * as vscode from "vscode";
 import { TradingViewProvider } from "./tradingViewProvider";
 
 export function activate(context: vscode.ExtensionContext) {
-  // 🔍 Proof of activation (check DevTools console)
-  console.log("✅ XiheTradingTerminal extension activated");
+  const log = vscode.window.createOutputChannel("XiheTradingTerminal", { log: true });
+  context.subscriptions.push(log);
+  log.info(`Activated version=${context.extension.packageJSON.version} platform=${process.platform} node=${process.version} remote=${vscode.env.remoteName ?? "local"}`);
 
   const provider = new TradingViewProvider(
     context.extensionUri,
-    context.workspaceState
+    context.workspaceState,
+    log
   );
 
   // Register the sidebar webview
@@ -27,7 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Optional: reload command (useful for debugging)
   context.subscriptions.push(
     vscode.commands.registerCommand("xihe-trading-terminal.reload", () => {
-      console.log("🔄 XiheTradingTerminal reload command executed");
+      log.info("Reload Sidebar requested");
       provider.reload();
       vscode.window.showInformationMessage("XiheTradingTerminal reloaded");
     })

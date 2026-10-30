@@ -23,6 +23,7 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
   const status = document.createElement("div");
   status.className = "local-status";
   status.setAttribute("role", "status");
+  status.textContent = "Connecting to the hosted Widget feed…";
   const canvas = document.createElement("div");
   canvas.className = "local-canvas";
   container.append(legend, status, canvas);
@@ -53,7 +54,9 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
   let auxiliary = new Map<string, Candle[]>();
   let info: SymbolInfo | undefined;
   let first = true, pending = false, rendering = false;
-  let stopFeed: (() => void) | undefined;
+  let feed: ReturnType<typeof subscribePreview> | undefined;
+  let reportedRender = false;
+  let lastRenderError = "";
   let renderTimer: ReturnType<typeof setTimeout> | undefined;
   let request: AbortController | undefined;
   let visible = true;
@@ -127,9 +130,13 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
       notes.hidden = !warnings.length; notesSummary.textContent = `Indicator notes (${warnings.length}) · data coverage and preset limits`;
       notesBody.replaceChildren(...warnings.map(message => { const paragraph = document.createElement("p"); paragraph.textContent = message; return paragraph; }));
       updateStatus();
+      if (!reportedRender) { feed?.report({ stage: "rendered", bars: snapshot.length }); reportedRender = true; }
+      lastRenderError = "";
     } catch (error) {
       if (!controller.signal.aborted && !disposed) {
-        status.textContent = `Indicator preview: ${error instanceof Error ? error.message : String(error)}`;
+        const message = error instanceof Error ? error.message : String(error);
+        status.textContent = `Indicator preview: ${message}`;
+        if (message !== lastRenderError) { feed?.report({ stage: "renderError", message }); lastRenderError = message; }
       }
     } finally {
       rendering = false;
@@ -169,11 +176,12 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
     updateStatus(); scheduleRender();
   }
   function start() {
-    if (disposed || !visible || document.hidden || stopFeed) { return; }
+    if (disposed || !visible || document.hidden || feed) { return; }
     auxiliary.clear();
-    stopFeed = subscribePreview({ symbol: tab.symbol, interval: tab.interval, auxiliary: indicatorDataRequirements(tab.localIndicators, tab.interval) }, send, receive);
+    reportedRender = false; lastRenderError = "";
+    feed = subscribePreview({ symbol: tab.symbol, interval: tab.interval, auxiliary: indicatorDataRequirements(tab.localIndicators, tab.interval) }, send, receive);
   }
-  function stop() { clearTimeout(renderTimer); request?.abort(); stopFeed?.(); stopFeed = undefined; }
+  function stop() { clearTimeout(renderTimer); request?.abort(); feed?.stop(); feed = undefined; }
   function onVisibility() { stop(); if (!document.hidden && visible) { start(); } }
   document.addEventListener("visibilitychange", onVisibility);
   start();

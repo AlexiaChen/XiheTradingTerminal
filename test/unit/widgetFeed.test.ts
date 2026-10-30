@@ -68,4 +68,15 @@ describe("native read-only Widget feed", () => {
     expect(sockets[0].terminate).toHaveBeenCalledOnce();
     expect(events.at(-1)).toMatchObject({ kind: "status", state: "reconnecting" });
   });
+  it("reports transport failure codes without exposing proxy credentials and ignores disposed socket errors", async () => {
+    const socket = sockets[0];
+    socket.emit("error", Object.assign(new Error("http://user:secret@proxy/private"), { code: "ECONNREFUSED" }));
+    socket.terminate();
+    expect(events.at(-1)).toMatchObject({ kind: "status", message: expect.stringContaining("ECONNREFUSED") });
+    expect(JSON.stringify(events)).not.toContain("secret");
+    await vi.advanceTimersByTimeAsync(1000);
+    const count = events.length;
+    socket.emit("error", new Error("late socket error"));
+    expect(events).toHaveLength(count);
+  });
 });

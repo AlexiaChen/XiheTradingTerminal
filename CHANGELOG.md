@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.0.1] - 2026-10-30
+
+- Fix blank indicator previews caused by rejecting messages forwarded from VS Code's outer Webview frame. Validate the shared Webview origin while continuing to reject embedded TradingView messages; also restore host replies for JS imports and workspace removal.
+- Add an XiheTradingTerminal Output log with host/proxy selection, subscription IDs, socket failures and retries, history counts, frontend receipt and first-render acknowledgements. Hide proxy credentials and avoid per-candle logging.
+- Show an initial connection status immediately and keep initialization errors beside the preview. Add regression coverage for parent-frame messages, cross-origin spoofing, stale replies and diagnostic redaction.
+
 ## [1.0.0] - 2026-10-30
 
 - Show the hosted main chart and Lightweight indicator preview together: side by side on wide windows and stacked in narrow sidebars. Retain cached main-chart instances and legacy workspace data.
