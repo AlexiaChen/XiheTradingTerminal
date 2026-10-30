@@ -52,6 +52,10 @@
   .workspace-bar select { @apply min-w-32 max-w-64 flex-1; }
   .workspace-bar button { @apply whitespace-nowrap; }
   .control-bar { @apply flex min-h-9 items-center justify-between gap-2; }
+  .engine-tabs { @apply flex gap-1 rounded-lg border border-tv-border bg-tv-surface p-1; }
+  .engine-tabs button { @apply flex-1 rounded-md px-2 py-1.5 text-tv-muted; }
+  .engine-tabs button[aria-selected="true"] { @apply bg-tv-accent/15 text-tv-accent; }
+  .engine-tabs button:focus-visible { @apply outline outline-tv-accent; }
   .tabs { @apply flex min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5; scrollbar-width: thin; }
   .tab { @apply inline-flex shrink-0 items-center rounded-lg border border-tv-border bg-tv-surface; }
   .tab.active { @apply border-tv-accent bg-tv-accent/15; }
@@ -71,7 +75,26 @@
   .segmented button { @apply min-w-14 flex-1 border-0 bg-tv-surface-2 px-2 text-tv-text; }
   .segmented button + button { @apply border-l border-tv-border; }
   .segmented button.active { @apply bg-tv-accent text-tv-accent-text; }
-  .chart-caption { @apply flex justify-between gap-2 text-[11px] text-tv-muted; }
+  .chart-caption { @apply flex flex-wrap items-center justify-between gap-2 text-[11px] text-tv-muted; }
+  .chart-retry { @apply rounded border border-tv-border px-2 py-0.5 text-tv-text hover:border-tv-accent; }
+  .chart-notice { @apply rounded-lg border border-tv-border bg-tv-surface p-2 text-tv-text break-words; }
+  .local-tools { @apply flex flex-wrap items-center gap-2; }
+  .local-help { @apply text-[11px] text-tv-muted; }
+  .indicator-list { @apply inline-flex flex-wrap gap-1; }
+  .indicator-chip { @apply inline-flex items-center rounded border border-tv-border px-1.5 text-xs; }
+  .indicator-remove { @apply ml-1 p-1 hover:text-tv-danger; }
+  .local-chart { @apply flex flex-col; }
+  .local-legend { @apply flex flex-wrap justify-between gap-2 px-3 pt-2 text-xs text-tv-accent; }
+  .local-status { @apply px-3 py-1.5 text-[11px] text-tv-muted break-words; }
+  .local-canvas { @apply relative min-h-40 flex-1; }
+  /* Lightweight Charts injects an inline logo stylesheet, which our CSP blocks.
+     Supply the attribution styling through the authorized local stylesheet. */
+  .local-canvas #tv-attr-logo {
+    @apply absolute bottom-2.5 left-2.5 z-3 m-0 h-[19px] w-[35px] border-0 p-0;
+    --fill: #3c3836;
+    --stroke: #fbf1c7;
+  }
+  .local-canvas #tv-attr-logo[data-dark] { --fill: #ebdbb2; --stroke: #282828; }
   .direction-key { @apply text-tv-accent; }
   .interval-warning { @apply text-[11px] text-amber-600; }
   .chart-shell { @apply min-h-56 flex-1 overflow-hidden rounded-lg border border-tv-border bg-tv-surface; }

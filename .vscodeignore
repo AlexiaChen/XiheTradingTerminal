@@ -7,3 +7,5 @@
 !out/*.css
 !media/**
 !doc/assets/**
+!third-party/**
+!examples/indicators/*.js

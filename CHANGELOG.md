@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.0.3] - 2026-10-30
+
+- Add separate TradingView Widget / Lightweight Charts engine tabs, preserving each engine's instance when switching.
+- Bundle official open-source Lightweight Charts 5.2.1 with Gruvbox styling and MA(90) / ZigZag(5%, 10) presets.
+- Load Binance spot candles, including native 6h/8h; poll visible local charts every 15 seconds and catch up after hiding.
+- Load and save local JavaScript indicators, calculated in Workers with validated output and a two-second timeout. Include an EMA(20) example.
+- Preserve old symbols and names, extra studies, engine selection and JS source. Support Volume and RSI in local charts.
+- Fix hidden loading errors in narrow sidebars; asynchronously load the hosted library and add Retry Chart.
+- Update indirect tooling dependencies to resolve the npm audit findings.
+
 ## [0.0.2] - 2026-10-30
 
 - Start new workspaces with ETHUSDT / 4H and Settings collapsed; preserve saved configurations.

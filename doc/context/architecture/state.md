@@ -6,7 +6,8 @@
 TradingViewState
 ├── workspaces[]
 │   ├── id, name
-│   ├── tabs[]: id, name, symbol, interval, studies[], theme, timezone
+│   ├── tabs[]: id, name, symbol, interval, studies[], theme, timezone, engine
+│   │   └── customIndicators[]: id, name, source
 │   └── activeTabId
 ├── activeWorkspaceId
 └── ui.isToolbarCollapsed
@@ -21,3 +22,5 @@ normalizeStudies 始终补充 ZigZag 和 MASimple，并保留合法额外 study 
 这个状态不包含 TradingView iframe 内的完整指标/绘图布局。通过实例复用保持的会话内编辑，与可关闭重开恢复的插件配置，是不同的保存边界。
 
 插件重命名后 ID 为 AlexiaChen.xihe-trading-terminal，VS Code 对不同插件 ID 的 Memento 隔离；上述键兼容不等于能够跨插件 ID 导入上游扩展的数据。
+
+旧状态 engine 默认为 widget，customIndicators 为空；引擎选择和 JS 源码快照可恢复，数量和 UTF-8 字节大小受限制。已有 SOLUSDT 标签和显式参数不覆盖，重装同 ID 插件可能恢复 Memento；新建 Workspace 使用 ETH/4H 默认。

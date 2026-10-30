@@ -15,6 +15,11 @@ with ZipFile(package) as archive:
         "extension/media/xihe.png", "extension/media/icon.svg",
         "extension/doc/assets/gruvbox-dark.png",
         "extension/doc/assets/gruvbox-light.png",
+        "extension/doc/assets/lightweight-dark.png",
+        "extension/examples/indicators/ema-20.js",
+        "extension/third-party/lightweight-charts-LICENSE.txt",
+        "extension/third-party/lightweight-charts-NOTICE.txt",
+        "extension/third-party/fancy-canvas-LICENSE.txt",
         "extension.vsixmanifest", "[Content_Types].xml",
     }
     assert required <= names, f"Missing files: {required - names}"
@@ -30,6 +35,9 @@ with ZipFile(package) as archive:
         "out/extension.js", "out/webview.js", "out/webview.css",
         "media/xihe.png", "media/icon.svg",
         "doc/assets/gruvbox-dark.png", "doc/assets/gruvbox-light.png",
+        "doc/assets/lightweight-dark.png", "examples/indicators/ema-20.js",
+        "third-party/lightweight-charts-LICENSE.txt", "third-party/lightweight-charts-NOTICE.txt",
+        "third-party/fancy-canvas-LICENSE.txt",
     ):
         assert archive.read(f"extension/{filename}") == (root / filename).read_bytes(), filename
 print(f"PASS: {package.name}: identity, entry points, exact bundles/icons/screenshots, no dependencies/source/tests")

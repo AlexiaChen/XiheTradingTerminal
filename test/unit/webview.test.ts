@@ -1,12 +1,21 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type * as vscode from "vscode";
+import * as vscode from "vscode";
 import { TradingViewProvider } from "../../src/tradingViewProvider";
 import { activeTab, activeWorkspace, normalizeState } from "../../src/chartState";
 import type { TradingViewState } from "../../src/chartState";
 import type { widgetOptions } from "../../src/theme";
 
-async function mount(initial?: unknown, restored?: unknown) {
+const localCharts = vi.hoisted(() => [] as { remove: ReturnType<typeof vi.fn>; setVisible: ReturnType<typeof vi.fn> }[]);
+vi.mock("../../src/webview/lightweightChart", () => ({
+  createLightweightChart: () => {
+    const chart = { remove: vi.fn(), setVisible: vi.fn() };
+    localCharts.push(chart);
+    return chart;
+  }
+}));
+
+async function mount(initial?: unknown, restored?: unknown, missingLibrary = false) {
   vi.resetModules();
   const clone = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));
   let persisted = clone(initial);
@@ -32,7 +41,7 @@ async function mount(initial?: unknown, restored?: unknown) {
     constructor(public options: ReturnType<typeof widgetOptions>) { instances.push(this); }
   }
   const instances: Widget[] = [];
-  window.TradingView = { widget: Widget };
+  if (missingLibrary) { delete window.TradingView; } else { window.TradingView = { widget: Widget }; }
   vi.stubGlobal("acquireVsCodeApi", () => ({
     getState: () => local,
     setState: (state: TradingViewState) => { local = clone(state); },
@@ -42,7 +51,8 @@ async function mount(initial?: unknown, restored?: unknown) {
   return {
     instances, html: webview.html,
     state: () => clone(local) as TradingViewState,
-    saved: () => clone(persisted) as TradingViewState
+    saved: () => clone(persisted) as TradingViewState,
+    send: (message: unknown) => receive(message)
   };
 }
 
@@ -57,9 +67,91 @@ function rename(name: string) {
   document.querySelector<HTMLFormElement>("#renameForm")!.dispatchEvent(new Event("submit", { cancelable: true }));
 }
 
-beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); });
+beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localCharts.length = 0; });
 
 describe("terminal Webview interactions", () => {
+  it("loads a selected JS file through the host and persists its source", async () => {
+    const page = await mount();
+    const source = "function calculate() { return []; }";
+    vi.spyOn(vscode.window, "showOpenDialog").mockResolvedValue([{ path: "/tmp/ema.js" } as vscode.Uri]);
+    vi.spyOn(vscode.workspace.fs, "readFile").mockResolvedValue(new TextEncoder().encode(source));
+    await page.send({ type: "loadIndicator", workspaceId: page.state().activeWorkspaceId, tabId: activeTab(page.state()).id });
+    expect(activeTab(page.saved()).customIndicators[0]).toMatchObject({ name: "ema.js", source });
+  });
+
+  it("does not load executable files in untrusted workspaces", async () => {
+    const page = await mount();
+    vi.spyOn(vscode.workspace, "isTrusted", "get").mockReturnValue(false);
+    const open = vi.spyOn(vscode.window, "showOpenDialog");
+    await page.send({ type: "loadIndicator", workspaceId: page.state().activeWorkspaceId, tabId: activeTab(page.state()).id });
+    expect(open).not.toHaveBeenCalled();
+    expect(activeTab(page.saved()).customIndicators).toEqual([]);
+  });
+
+  it("rejects oversized indicator files without saving partial source", async () => {
+    const page = await mount();
+    vi.spyOn(vscode.window, "showOpenDialog").mockResolvedValue([{ path: "/tmp/large.js" } as vscode.Uri]);
+    vi.spyOn(vscode.workspace.fs, "readFile").mockResolvedValue(new Uint8Array(65 * 1024));
+    const error = vi.spyOn(vscode.window, "showErrorMessage");
+    await page.send({ type: "loadIndicator", workspaceId: page.state().activeWorkspaceId, tabId: activeTab(page.state()).id });
+    expect(error).toHaveBeenCalledWith("JS indicator files must be 64 KiB or smaller.");
+    expect(activeTab(page.saved()).customIndicators).toEqual([]);
+  });
+
+  it("switches engines with tabs, retaining each engine instance and Widget edits", async () => {
+    const page = await mount();
+    page.instances[0].customIndicators.push("internal edit");
+    click("#lightweightEngine");
+    expect(activeTab(page.saved()).engine).toBe("lightweight");
+    expect(localCharts).toHaveLength(1);
+    change("#intervalSelect", "360");
+    expect(document.querySelector<HTMLElement>("#intervalWarning")!.hidden).toBe(true);
+    change("#intervalSelect", "240");
+    click("#widgetEngine");
+    expect(page.instances).toHaveLength(1);
+    expect(page.instances[0].customIndicators).toEqual(["internal edit"]);
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+    expect(document.querySelector("#widgetEngine")!.getAttribute("aria-selected")).toBe("true");
+    click("#lightweightEngine");
+    expect(localCharts).toHaveLength(3);
+  });
+
+  it("keeps old SOL configuration and uses ETH / 4H only in a new workspace", async () => {
+    const page = await mount({ tabs: [{ id: "sol", name: "SOLUSDT", symbol: "BINANCE:SOLUSDT", interval: "15" }] });
+    expect(activeTab(page.state())).toMatchObject({ name: "SOLUSDT", symbol: "BINANCE:SOLUSDT", interval: "15", engine: "widget" });
+    click("#addWorkspace");
+    expect(activeTab(page.state())).toMatchObject({ symbol: "BINANCE:ETHUSDT", interval: "240" });
+  });
+
+  it("shows library failures in a visible notice and can switch to the local engine", async () => {
+    await mount(undefined, undefined, true);
+    await vi.waitFor(() => expect(document.querySelector("#chartNotice")!.textContent).toContain("Could not load TradingView"));
+    expect(document.querySelector<HTMLElement>("#chartNotice")!.hidden).toBe(false);
+    click("#lightweightEngine");
+    expect(localCharts).toHaveLength(1);
+    expect(document.querySelector<HTMLElement>("#chartNotice")!.hidden).toBe(true);
+  });
+
+  it("retries only the active engine while keeping the other chart alive", async () => {
+    const page = await mount();
+    click("#addTab");
+    click("#retryChart");
+    expect(page.instances).toHaveLength(3);
+    expect(page.instances[1].remove).toHaveBeenCalledOnce();
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+  });
+
+  it("persists loaded JS source for the target chart and retains it across engine switches", async () => {
+    const page = await mount();
+    const workspace = activeWorkspace(page.state());
+    const tab = activeTab(page.state());
+    window.dispatchEvent(new MessageEvent("message", { data: { type: "indicatorLoaded", workspaceId: workspace.id, tabId: tab.id, name: "EMA 20.js", source: "function calculate(bars) { return []; }" } }));
+    expect(activeTab(page.saved()).customIndicators[0].name).toBe("EMA 20.js");
+    expect(page.instances).toHaveLength(1);
+    click("#lightweightEngine"); click("#widgetEngine");
+    expect(activeTab(page.saved()).customIndicators).toHaveLength(1);
+  });
+
   it("can create charts and workspaces when randomUUID is unavailable", async () => {
     const getRandomValues = crypto.getRandomValues.bind(crypto);
     vi.stubGlobal("crypto", { getRandomValues });

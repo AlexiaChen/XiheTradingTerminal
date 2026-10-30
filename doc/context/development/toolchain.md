@@ -14,9 +14,12 @@
 | VS Code API 类型 | 1.108.1 | 与最低 API 版本一致，避免误用新 API |
 | @types/node | 22.20.5 | 描述目标扩展宿主 API，而不是开发 Node 的最新 API |
 | vsce | 4.1.0 | 项目内开发依赖，独立打 VSIX |
+| Lightweight Charts | 5.2.1 | 官方开源金融图表，打入 Webview bundle，无需运行时 CDN |
 
 ES2022 不是过时或不能用；这里升级到明确的 ES2024 基线。tsc 仅做类型检查，Vite 负责生成产物。源码模块使用 ESNext/Bundler 解析，扩展输出 CommonJS 以匹配现有 manifest 入口。
 
 Vite 不替代 npm；npm 负责依赖与命令，Vite 负责构建。VS Code 官方打包文档主要示例是 esbuild/webpack；Vite 可以构建扩展和 Webview，不宜宣称是所有插件的唯一主流标准。官方历史 Webview 样例也有 React+Vite（该样例仓库已归档）。
 
 参考：[VS Code bundling](https://code.visualstudio.com/api/working-with-extensions/bundling-extension)、[Vite library mode](https://vite.dev/guide/build.html#library-mode)、[typescript-eslint 版本范围](https://typescript-eslint.io/users/dependency-versions/)。确切依赖以 package-lock.json 为准。
+
+2026-10-30 加入 Lightweight Charts 后修复 @azure/identity、@azure/msal-node、@humanfs/node 间接依赖审计项；npm audit fix 未用 force，当次 0 vulnerabilities。0.0.3 包内携带图表许可证和 JS 示例，不打入 node_modules。

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DEFAULT_SYMBOL, LEGACY_STATE_KEY, normalizeState, STATE_KEY } from "./chartState";
+import { DEFAULT_SYMBOL, LEGACY_STATE_KEY, MAX_INDICATOR_BYTES, normalizeState, STATE_KEY } from "./chartState";
 
 export class TradingViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
@@ -24,6 +24,19 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
         if (result === "Remove") {
           await view.webview.postMessage({ type: "removeWorkspace", workspaceId: message.workspaceId });
         }
+      } else if (message?.type === "loadIndicator" && typeof message.workspaceId === "string" && typeof message.tabId === "string") {
+        if (!vscode.workspace.isTrusted) {
+          await vscode.window.showWarningMessage("Trust this workspace before loading executable JS indicators.");
+          return;
+        }
+        const files = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { "JavaScript indicator": ["js"] }, openLabel: "Load JS Indicator" });
+        if (!files?.[0]) { return; }
+        try {
+          const bytes = await vscode.workspace.fs.readFile(files[0]);
+          if (bytes.byteLength > MAX_INDICATOR_BYTES) { throw new Error("JS indicator files must be 64 KiB or smaller."); }
+          const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+          await view.webview.postMessage({ type: "indicatorLoaded", workspaceId: message.workspaceId, tabId: message.tabId, name: files[0].path.split("/").at(-1) ?? "Custom JS", source });
+        } catch (error) { await vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error)); }
       }
     });
   }
@@ -39,7 +52,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
 <head>
   <meta charset="UTF-8" />
   <title>XiheTradingTerminal</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} https://s3.tradingview.com; style-src ${webview.cspSource}; frame-src https://*.tradingview.com;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} https://s3.tradingview.com; style-src ${webview.cspSource}; connect-src https://data-api.binance.vision; worker-src blob:; frame-src https://*.tradingview.com;" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${styles}" />
 </head>
@@ -52,6 +65,10 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       <button id="renameWorkspace" class="tv-btn" type="button" title="Rename workspace">Rename</button>
       <button id="addWorkspace" class="tv-btn" type="button">+ Workspace</button>
       <button id="closeWorkspace" class="tv-btn" type="button" title="Remove workspace">Remove</button>
+    </div>
+    <div class="engine-tabs" role="tablist" aria-label="Chart engine">
+      <button id="widgetEngine" role="tab" aria-selected="true" aria-controls="container" type="button">TradingView Widget</button>
+      <button id="lightweightEngine" role="tab" aria-selected="false" aria-controls="container" type="button">Lightweight Charts</button>
     </div>
     <div class="control-bar">
       <div class="tabs" id="tabs" aria-label="Chart tabs"></div>
@@ -90,9 +107,16 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div class="chart-caption">
       <span>ZigZag (5%, 10) · MA (90)</span><span class="direction-key">Blue ↑ / Gold ↓</span>
+      <button id="retryChart" class="chart-retry" type="button" title="Recreate only this chart. Unsaved edits inside this chart will be lost.">Retry Chart</button>
+    </div>
+    <div id="chartNotice" class="chart-notice" role="status" hidden></div>
+    <div id="localTools" class="local-tools" hidden>
+      <button id="loadIndicator" class="tv-btn" type="button">Load JS Indicator</button>
+      <span id="customIndicators" class="indicator-list"></span>
+      <span class="local-help">Binance spot · JavaScript indicators · no Pine Script</span>
     </div>
     <div id="intervalWarning" class="interval-warning" role="status" hidden>TradingView may fall back to 1D for 6h / 8h. Check the interval inside the chart.</div>
-    <div class="chart-shell"><div id="container"></div></div>
+    <div class="chart-shell"><div id="container" role="tabpanel" aria-labelledby="widgetEngine"></div></div>
   </div>
   <div id="renameDialog" class="rename-overlay" role="dialog" aria-modal="true" aria-labelledby="renameTitle" hidden>
     <form id="renameForm" class="rename-card">
@@ -102,7 +126,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     </form>
   </div>
   <script nonce="${nonce}" type="application/json" id="initialState">${state}</script>
-  <script nonce="${nonce}" src="https://s3.tradingview.com/tv.js"></script>
+  <script nonce="${nonce}" type="application/json" id="runtimeConfig">${JSON.stringify({ trusted: vscode.workspace.isTrusted }).replace(/</g, "\\u003c")}</script>
   <script nonce="${nonce}" src="${script}" defer></script>
 </body>
 </html>`;

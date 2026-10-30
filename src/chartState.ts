@@ -1,4 +1,6 @@
 export type Theme = "dark" | "light";
+export type ChartEngine = "widget" | "lightweight";
+export type CustomIndicator = { id: string; name: string; source: string };
 export type ChartTab = {
   id: string;
   name: string;
@@ -7,6 +9,8 @@ export type ChartTab = {
   studies: string[];
   theme: Theme;
   timezone: string;
+  engine: ChartEngine;
+  customIndicators: CustomIndicator[];
 };
 export type ChartWorkspace = { id: string; name: string; tabs: ChartTab[]; activeTabId: string };
 export type TradingViewState = {
@@ -20,6 +24,18 @@ export const LEGACY_STATE_KEY = "tradingview.state";
 export const DEFAULT_SYMBOL = "BINANCE:ETHUSDT";
 export const DEFAULT_INTERVAL = "240";
 export const REQUIRED_STUDIES = ["ZigZag@tv-basicstudies", "MASimple@tv-basicstudies"];
+export const MAX_INDICATOR_BYTES = 64 * 1024;
+export const MAX_INDICATORS = 8;
+
+export function normalizeCustomIndicators(raw: unknown): CustomIndicator[] {
+  if (!Array.isArray(raw)) { return []; }
+  const used = new Set<string>();
+  return raw.slice(0, MAX_INDICATORS).flatMap((value, index) => {
+    const item = record(value);
+    if (typeof item.source !== "string" || new TextEncoder().encode(item.source).length > MAX_INDICATOR_BYTES) { return []; }
+    return [{ id: uniqueId(item.id, `indicator-${index + 1}`, used), name: text(item.name, `Indicator ${index + 1}`).slice(0, 80), source: item.source }];
+  });
+}
 
 export function normalizeStudies(raw: unknown): string[] {
   const additional = Array.isArray(raw) ? raw.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map(value => value.trim()) : [];
@@ -27,7 +43,7 @@ export function normalizeStudies(raw: unknown): string[] {
 }
 
 export function createTab(id: string, name = "Main"): ChartTab {
-  return { id, name, symbol: DEFAULT_SYMBOL, interval: DEFAULT_INTERVAL, studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC" };
+  return { id, name, symbol: DEFAULT_SYMBOL, interval: DEFAULT_INTERVAL, studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC", engine: "widget", customIndicators: [] };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -64,7 +80,9 @@ export function normalizeState(raw: unknown): TradingViewState {
         interval: typeof tab.interval === "string" || typeof tab.interval === "number" ? String(tab.interval) : DEFAULT_INTERVAL,
         studies: normalizeStudies(tab.studies),
         theme: tab.theme === "light" ? "light" : "dark",
-        timezone: text(tab.timezone, "Etc/UTC")
+        timezone: text(tab.timezone, "Etc/UTC"),
+        engine: tab.engine === "lightweight" ? "lightweight" : "widget",
+        customIndicators: normalizeCustomIndicators(tab.customIndicators)
       };
     });
     if (!tabs.length) { tabs.push(createTab("tab-1")); }

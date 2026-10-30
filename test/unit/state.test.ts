@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeTab, activeWorkspace, normalizeState, normalizeStudies, REQUIRED_STUDIES } from "../../src/chartState";
+import { activeTab, activeWorkspace, MAX_INDICATOR_BYTES, normalizeCustomIndicators, normalizeState, normalizeStudies, REQUIRED_STUDIES } from "../../src/chartState";
 import { widgetOptions } from "../../src/theme";
 
 describe("workspace state", () => {
@@ -36,6 +36,15 @@ describe("workspace state", () => {
 
   it("does not allow additional-indicator edits to remove required defaults", () => {
     expect(normalizeStudies(["", REQUIRED_STUDIES[0], 12, " RSI@tv-basicstudies "])).toEqual([...REQUIRED_STUDIES, "RSI@tv-basicstudies"]);
+  });
+
+  it("migrates to the hosted engine and retains local JS configuration on round trips", () => {
+    const legacy = normalizeState({ tabs: [{ symbol: "BINANCE:SOLUSDT" }] });
+    expect(activeTab(legacy)).toMatchObject({ engine: "widget", customIndicators: [], symbol: "BINANCE:SOLUSDT" });
+    activeTab(legacy).engine = "lightweight";
+    activeTab(legacy).customIndicators = [{ id: "ema", name: "EMA 20", source: "function calculate() { return []; }" }];
+    expect(normalizeState(JSON.parse(JSON.stringify(legacy)))).toEqual(legacy);
+    expect(normalizeCustomIndicators([{ source: "x".repeat(MAX_INDICATOR_BYTES + 1) }])).toEqual([]);
   });
 });
 

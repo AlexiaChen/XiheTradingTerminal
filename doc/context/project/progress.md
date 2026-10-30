@@ -31,3 +31,11 @@
 XiheTradingTerminal / xihe-trading-terminal，origin 已指向用户给定的新仓库。默认 ETH/4H、Settings 折叠；现有显式保存值保持。未济图标源与 PNG 已完成（49 点留一位，六爻完整）。改名和默认值修改后 17 项回归、lint、类型检查与 Vite 构建通过；用户要求再次 commit，本次提交不推送。
 
 最终深浅截图来自当前 Vite 构建，均为真实 ETH/4H 托管图表 + VS Code API 预览替身，深色 Settings 折叠，浅色 420px 宽无横向溢出。ZigZag 偏差参数修正为 `zigzag.deviation (%)`，通过临时改为 7 并观察真实图例、恢复为 5 验证生效；MA 图例为 90。VSIX 校验同时对比当前 bundle、图标及截图的实际字节。
+
+## 2026-10-30：0.0.3 双引擎与 JS 指标
+
+用户确认旧 SOL 配置来自工作区保存，继续保留；在核对官方授权后选择 Lightweight Charts 5.2.1，不接入需另行授权且不提供个人用途的 Advanced Charts。增加独立引擎切换 Tab、每引擎缓存、Binance 公开现货数据与原生 6h/8h、本地 JS 导入/源码保存/Worker。默认配置和 Gruvbox 保持，Widget 仍为缺省引擎。
+
+46 项离线回归、lint、类型检查和构建通过。真实浏览器验证 ETH/4H、EMA20、6h/8h 时间间隔 21600/28800 秒、iframe 身份复用、死循环 JS 两秒终止、窄栏网络错误提示。截图来自当前构建、真实市场数据与 VS Code API 预览替身；未下载/启动 VS Code，远程 CI 尚未运行。包名版本升至0.0.3，打包仍不隐式测试，许可/示例/新截图加入 ZIP 校验。
+
+最终 0.0.3 VSIX（19 文件）已重新生成，身份、入口、bundle、图标、三张截图、JS 示例和许可证字节校验通过；文档链接、manifest/lock、CI shell 语法和 diff 检查通过。构建产物及 node_modules 仍不跟踪。

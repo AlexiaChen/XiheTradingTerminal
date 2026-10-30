@@ -4,12 +4,17 @@
 
 Named after **Xihe (羲和)**, the solar goddess associated with time and celestial cycles. The mark is **Weiji (未济), Hexagram 64**: fire above water. Its forty-nine dots occupy a fifty-position ring, leaving one gap.
 
-A chart workspace for VS Code, with named workspaces, independent chart tabs, and a warm Gruvbox palette. Keep market charts beside your code without rebuilding your indicator setup every time you switch tabs.
+A chart workspace for VS Code, with named workspaces, independent chart tabs, and a warm Gruvbox palette. Switch between TradingView's hosted Widget and its official open-source **Lightweight Charts 5.2.1**. Local charts support your own JavaScript indicators.
+
+![Lightweight Charts with ETH 4H candles, MA 90, ZigZag and a local EMA 20 indicator](doc/assets/lightweight-dark.png)
 
 ![Gruvbox Dark workspace with named chart tabs, ZigZag and MA 90](doc/assets/gruvbox-dark.png)
 
 ## Features
 
+- **Two chart-engine tabs:** choose **TradingView Widget** or **Lightweight Charts** for each chart. Switching engines preserves both instances; chart and workspace tabs remain independent.
+- **Local JavaScript indicators:** load a `.js` file into a Lightweight chart. Indicator code and names are saved with that chart. Computation runs in a Worker with a two-second limit.
+- **Native Binance spot intervals:** local charts load public Binance candles, including real **6h / 8h** bars, with MA(90) and ZigZag(5%, 10). The latest 1,000 bars load initially; the visible chart polls every 15 seconds. Hidden charts pause polling and catch up when shown.
 - **Named workspaces:** group charts by market, strategy, or trading session. Create, switch, rename, and remove workspaces inside the sidebar.
 - **Independent chart tabs:** rename charts with the pencil button or a double-click. Each tab keeps its symbol, interval, theme, and additional indicators.
 - **Start with ETH / 4H:** new workspaces open `BINANCE:ETHUSDT` at four-hour resolution, with Settings collapsed by default. Existing saved configurations are retained.
@@ -20,7 +25,7 @@ A chart workspace for VS Code, with named workspaces, independent chart tabs, an
 - **Workspace persistence:** chart configuration, names, active selections, and toolbar visibility are saved in the current VS Code project.
 
 <details>
-<summary>Gruvbox Light in a narrow sidebar</summary>
+<summary>Lightweight Charts in a narrow Gruvbox Light sidebar</summary>
 
 <img src="doc/assets/gruvbox-light.png" alt="Gruvbox Light sidebar with ZigZag and MA 90" width="420" />
 
@@ -44,7 +49,7 @@ The packaging tool, `@vscode/vsce`, is installed as a local development dependen
 The installer is written to:
 
 ```text
-dist/xihe-trading-terminal-0.0.2.vsix
+dist/xihe-trading-terminal-0.0.3.vsix
 ```
 
 Extension ID: `AlexiaChen.xihe-trading-terminal`. This renamed extension has a separate identity from the original TradingView Sidebar; its saved settings are not automatically shared with that extension.
@@ -66,14 +71,47 @@ If you build in WSL and use VS Code on Windows, select the file from the host VS
 4. Choose an interval and a Gruvbox theme. ZigZag and MA 90 are included automatically; use **Additional indicators** for supported built-in IDs, such as `RSI@tv-basicstudies`.
 5. Use **Hide Settings** to maximize the chart. At least one workspace and one chart are retained.
 
+Use the **TradingView Widget / Lightweight Charts** tabs to switch engines. Both use the same symbol, interval, theme, and mandatory indicator presets. Local charts support `BINANCE:` spot symbols; use the Widget for other exchanges, futures or stocks. Existing additional indicators are retained: local charts render Volume and RSI(14), and explicitly list other saved study IDs as Widget-only.
+
+## Write a local JavaScript indicator
+
+Select **Lightweight Charts → Load JS Indicator** and choose a self-contained `.js` file, such as [examples/indicators/ema-20.js](examples/indicators/ema-20.js). This requires a trusted VS Code workspace. Define a top-level `calculate(bars)` function:
+
+```js
+function calculate(bars) {
+  let ema;
+  const alpha = 2 / 21;
+  return [{
+    name: "EMA 20",
+    color: "#b8bb26",
+    data: bars.map(bar => {
+      ema = ema === undefined ? bar.close : alpha * bar.close + (1 - alpha) * ema;
+      return { time: bar.time, value: ema };
+    })
+  }];
+}
+```
+
+Each bar contains `time` (Unix seconds, UTC), `open`, `high`, `low`, `close`, and `volume`. Return an array of plots with a `name`, hex `color`, and ascending `{ time, value }` points using candle timestamps. Optional `type: "histogram"` draws columns; `pane: 1` creates a separate indicator pane. The default is an overlaid line. Files cannot use imports, Node.js APIs, DOM access, or Pine Script.
+
+Up to eight scripts of 64 KiB each can be saved per chart, with at most eight plots per script. Errors, invalid output and two-second timeouts are reported in the local chart. Use the **×** beside a script to remove it. The saved source is a snapshot: edit the file, remove the previous copy, and load it again to apply changes. Required MA and ZigZag presets remain present.
+
+Local ZigZag uses depth-confirmed pivots and a 5% reversal threshold. Pivots are delayed by the confirmation window and the latest extreme may move; it is not a claim of bit-for-bit parity with the hosted TradingView indicator. Local charts use UTC and do not include the Widget's full drawing-tool collection.
+
+## Saved settings and blank charts
+
+Reinstalling the same extension can restore the VS Code project's saved chart configuration, including old SOLUSDT names and symbols. New defaults do not overwrite explicit saved choices. Use **+ Workspace** for a new ETH / 4H workspace, or edit and rename the existing chart.
+
+**Retry Chart** recreates only the selected chart engine. It preserves saved configuration and other chart instances, but discards unsaved edits inside that instance. Hosted-library errors and timeouts are visible even in a narrow sidebar. Check network/proxy access to `s3.tradingview.com` and `www.tradingview.com` for the Widget, or `data-api.binance.vision` for local candles. A frame being created does not prove its remote data loaded.
+
 **XiheTradingTerminal: Reload Sidebar** rebuilds the view from saved configuration. Its command ID is `xihe-trading-terminal.reload`.
 
 ## TradingView capabilities and limits
 
 This extension uses TradingView's official hosted widget, loaded from `s3.tradingview.com/tv.js`. Its available features differ from the full TradingView website.
 
-- **Community Pine scripts:** custom Pine Script indicators and strategies cannot be loaded into this widget. The additional-indicator field accepts supported built-in indicator IDs, not community script names or URLs. See the [official widget FAQ](https://www.tradingview.com/widget-docs/faq/general/).
-- **6h / 8h:** the extension can save and request these intervals, but a real hosted-widget check with `BINANCE:SOLUSDT` on 2026-10-29 fell back to **1D** for both. A warning is shown for these selections. Check the interval inside the chart; actual 6h/8h support remains unresolved.
+- **Pine scripts:** neither engine runs Pine Script or loads community Pine indicators. The Widget's additional-indicator field accepts supported built-in IDs. Local custom indicators use the JavaScript contract above. See the [official widget FAQ](https://www.tradingview.com/widget-docs/faq/general/).
+- **Widget 6h / 8h:** a real hosted-widget check with `BINANCE:SOLUSDT` on 2026-10-29 fell back to **1D** for both. A warning remains for Widget selections. Lightweight Charts uses Binance's native 6h/8h bars; real ETHUSDT API checks on 2026-10-30 confirmed 21,600 / 28,800 seconds between successive bar opens.
 - **Indicator persistence:** chart-internal edits survive tab and workspace switches while the Webview remains alive. A full sidebar reload, VS Code restart, or change to symbol/interval/theme/additional indicators recreates the widget. The hosted API does not expose a full chart-layout export here; internal edits are not restored after recreation. The required defaults and indicators entered in the extension toolbar are restored.
 - **Appearance:** TradingView's own menus, toolbars, and individual indicator colors may retain their standard styling. Instrument availability depends on TradingView's feeds and your network.
 
@@ -93,14 +131,18 @@ Press **F5 → Run Extension** to try the extension in your installed VS Code. A
 
 GitHub Actions runs on pushes, pull requests, and manual dispatch. It installs locked dependencies, runs offline checks and tests, packages the extension, verifies the VSIX contents, and uploads a **xihe-trading-terminal-vsix** artifact. It does not publish to the Marketplace.
 
+The [chart-library comparison and integration notes](doc/context/features/chart-engines.md) record the choice of Lightweight Charts over a general charting toolkit or the separately licensed Advanced Charts product.
+
 `node_modules/`, `out/`, `dist/`, downloaded test installations, and VSIX files are generated locally and excluded from Git. The VSIX includes the compiled extension, Webview JavaScript/CSS, media, README, changelog, license, and screenshots.
 
 Contributor guidance starts at [AGENTS.md](AGENTS.md). Architecture, feature behavior, and validation records are organized in [doc/context](doc/context/README.md).
 
 ## Privacy
 
-The extension saves its chart configuration locally in VS Code workspace state and adds no telemetry of its own. Embedded charts connect to TradingView under TradingView's own service policies.
+The extension saves chart configuration and loaded JS source locally in VS Code workspace state and adds no telemetry of its own. Embedded charts connect to TradingView; local charts fetch public Binance spot candles without account credentials. JS calculation runs in Workers, separately from the extension host and Webview DOM.
 
 ## License
 
 [MIT](LICENSE)
+
+Bundled [Lightweight Charts](https://github.com/tradingview/lightweight-charts) is licensed under Apache 2.0; its chart attribution remains visible. Third-party licenses and notices are included in [third-party](third-party).
