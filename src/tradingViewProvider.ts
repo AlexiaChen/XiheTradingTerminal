@@ -111,12 +111,19 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div id="chartNotice" class="chart-notice" role="status" hidden></div>
     <div id="localTools" class="local-tools" hidden>
-      <details id="builtinPicker" class="builtin-picker">
-        <summary>Built-in Indicators <span id="builtinCount"></span></summary>
-        <p class="builtin-required">Always on: ZigZag (5%, 10) · MA (90)</p>
-        <div id="builtinOptions" class="builtin-options"></div>
-        <p class="builtin-required">Local JS presets only. Selections are saved per chart.</p>
-      </details>
+      <div id="builtinPicker" class="builtin-picker">
+        <button id="builtinToggle" class="tv-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="builtinDropdown">Built-in Indicators <span id="builtinCount"></span> ▾</button>
+        <div id="builtinDropdown" class="builtin-dropdown" role="dialog" aria-label="Built-in indicators" hidden>
+          <div class="builtin-search-row">
+            <input id="builtinSearch" class="tv-input" type="search" placeholder="Search indicators…" aria-label="Search built-in indicators" aria-controls="builtinOptions" autocomplete="off" />
+            <button id="builtinClose" class="builtin-close" type="button" aria-label="Close indicators">×</button>
+          </div>
+          <p class="builtin-required">Always on: ZigZag (5%, 10) · MA (90)</p>
+          <div id="builtinOptions" class="builtin-options"></div>
+          <p id="builtinEmpty" class="builtin-empty" hidden>No matching indicators.</p>
+          <p id="builtinResults" class="builtin-required" role="status"></p>
+        </div>
+      </div>
       <button id="loadIndicator" class="tv-btn" type="button">Load JS Indicator</button>
       <span id="customIndicators" class="indicator-list"></span>
       <span class="local-help">Binance spot · JavaScript indicators · no Pine Script</span>

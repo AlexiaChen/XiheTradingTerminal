@@ -25,9 +25,15 @@ with ZipFile(package) as archive:
         "extension.vsixmanifest", "[Content_Types].xml",
     }
     assert required <= names, f"Missing files: {required - names}"
+    licenses = {
+        "extension/third-party/fancy-canvas-LICENSE.txt",
+        "extension/third-party/lightweight-charts-LICENSE.txt",
+        "extension/third-party/lightweight-charts-NOTICE.txt",
+    }
+    assert {name for name in names if name.startswith("extension/third-party/") and not name.endswith("/")} == licenses, "Unexpected third-party reference files in VSIX"
     forbidden = ("extension/node_modules/", "extension/src/", "extension/test/",
                  "extension/.github/", "extension/doc/context/", "extension/.git/")
-    assert not any(name.startswith(forbidden) or name.endswith((".vsix", ".map")) for name in names)
+    assert not any(name.startswith(forbidden) or name.endswith((".vsix", ".map", ".pine", ".pinescript")) for name in names)
     packaged = json.loads(archive.read("extension/package.json"))
     for field in ("name", "displayName", "publisher", "version", "icon"):
         assert packaged[field] == manifest[field], field

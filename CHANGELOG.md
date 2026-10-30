@@ -2,6 +2,7 @@
 
 ## [0.0.4] - 2026-10-30
 
+- Use a searchable multi-select dropdown for built-in indicators, with English/Chinese keyword search, keyboard controls and outside/Escape dismissal; filtering preserves selections.
 - Add a per-chart built-in indicator picker with 13 optional local JS presets: Auto Fib Retracement, EMA Ribbon, Bollinger/Donchian/Keltner Channels, Supertrend, Session VWAP, Volume, RSI, MACD, Stochastic, ATR and Squeeze Momentum.
 - Measure Fibonacci pullbacks on the latest confirmed ZigZag swing, with 0–100% retracement levels and a current retracement percentage; omit extension levels and trading signals.
 - Preserve mandatory MA90/ZigZag, custom JS, Widget instances and old workspace data. Migrate legacy local Volume/RSI selections without overriding an explicitly cleared selection.

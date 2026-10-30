@@ -4,7 +4,7 @@ import { widgetOptions } from "../theme";
 import { ChartCache } from "./chartCache";
 import { createWidgetLoader } from "./widgetLoader";
 import { createLightweightChart } from "./lightweightChart";
-import { BUILTIN_INDICATORS, normalizeLocalIndicators } from "../indicators/catalog";
+import { IndicatorPicker } from "./indicatorPicker";
 import "./styles.css";
 
 declare function acquireVsCodeApi(): {
@@ -37,6 +37,10 @@ const renameDialog = element("renameDialog");
 const renameInput = element<HTMLInputElement>("renameInput");
 let renameTarget: { kind: "workspace" | "chart"; workspaceId: string; tabId?: string } | undefined;
 let previousFocus: HTMLElement | null = null;
+const indicatorPicker = new IndicatorPicker(element("builtinPicker"), ids => {
+  activeTab(state).localIndicators = ids;
+  persist(); render();
+});
 const cache = new ChartCache(element("container"), (tab, id) => {
   if (tab.engine === "lightweight") { return createLightweightChart(tab, id, runtime.trusted === true); }
   if (!window.TradingView?.widget) { throw new Error("TradingView could not load. Check your network and reload the sidebar."); }
@@ -158,8 +162,7 @@ function render() {
     return chip;
   }));
   element<HTMLButtonElement>("loadIndicator").disabled = tab.customIndicators.length >= MAX_INDICATORS;
-  element("builtinCount").textContent = tab.localIndicators.length ? `(${tab.localIndicators.length})` : "";
-  for (const item of BUILTIN_INDICATORS) { element<HTMLInputElement>(`builtin-${item.id}`).checked = tab.localIndicators.includes(item.id); }
+  indicatorPicker.sync(tab.localIndicators, JSON.stringify([workspace.id, tab.id, tab.engine]));
   cache.retain(new Set(state.workspaces.flatMap(item => item.tabs.flatMap(chart => ["widget", "lightweight"].map(engine => JSON.stringify([item.id, chart.id, engine]))))));
   showChart();
 }
@@ -276,22 +279,4 @@ function flushInputs() {
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) { flushInputs(); } });
 window.addEventListener("beforeunload", flushInputs);
-// Build controls once so toggling an indicator keeps keyboard focus and the details panel open.
-for (const item of BUILTIN_INDICATORS) {
-  const label = document.createElement("label");
-  label.className = "builtin-option";
-  const input = document.createElement("input");
-  input.type = "checkbox"; input.id = `builtin-${item.id}`;
-  const text = document.createElement("span");
-  const name = document.createElement("strong"); name.textContent = item.name;
-  const description = document.createElement("small"); description.textContent = `${item.pane ? "Separate pane" : "Overlay"} · ${item.parameters}`;
-  text.append(name, description);
-  label.append(input, text);
-  element("builtinOptions").append(label);
-  input.addEventListener("change", () => {
-    const tab = activeTab(state);
-    tab.localIndicators = normalizeLocalIndicators(input.checked ? [...tab.localIndicators, item.id] : tab.localIndicators.filter(id => id !== item.id));
-    persist(); render();
-  });
-}
 persist(); render();

@@ -8,5 +8,7 @@
 !media/**
 !doc/assets/**
 !doc/indicators.md
-!third-party/**
+!third-party/fancy-canvas-LICENSE.txt
+!third-party/lightweight-charts-LICENSE.txt
+!third-party/lightweight-charts-NOTICE.txt
 !examples/indicators/*.js

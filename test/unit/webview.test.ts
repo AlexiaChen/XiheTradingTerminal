@@ -73,14 +73,16 @@ describe("terminal Webview interactions", () => {
   it("saves built-in selections per chart and preserves the picker and hosted instance", async () => {
     const page = await mount();
     click("#lightweightEngine");
-    const picker = document.querySelector<HTMLDetailsElement>("#builtinPicker")!;
-    picker.open = true;
+    const picker = document.querySelector<HTMLElement>("#builtinDropdown")!;
+    click("#builtinToggle");
     const fib = document.querySelector<HTMLInputElement>("#builtin-auto-fib")!;
     fib.checked = true; fib.dispatchEvent(new Event("change"));
     expect(activeTab(page.saved()).localIndicators).toEqual(["auto-fib"]);
     expect(document.querySelector("#builtin-auto-fib")).toBe(fib);
-    expect(picker.open).toBe(true);
+    expect(picker.hidden).toBe(false);
     click("#addTab");
+    expect(picker.hidden).toBe(true);
+    click("#builtinToggle");
     const second = document.querySelector<HTMLInputElement>("#builtin-auto-fib")!;
     second.checked = false; second.dispatchEvent(new Event("change"));
     expect(activeWorkspace(page.saved()).tabs[0].localIndicators).toEqual(["auto-fib"]);
@@ -94,6 +96,51 @@ describe("terminal Webview interactions", () => {
     expect(activeTab(page.saved()).studies).toContain("MASimple@tv-basicstudies");
     const restored = await mount(page.saved());
     expect(activeTab(restored.state()).localIndicators).toEqual(["auto-fib"]);
+  });
+
+  it("searches names and Chinese aliases without clearing hidden selections or rebuilding charts", async () => {
+    const page = await mount();
+    click("#lightweightEngine"); click("#builtinToggle");
+    const search = document.querySelector<HTMLInputElement>("#builtinSearch")!;
+    const query = (value: string) => { search.value = value; search.dispatchEvent(new Event("input")); };
+    query("MaCd");
+    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(1);
+    click("#builtin-macd");
+    const instances = localCharts.length;
+    query("斐波那契 回撤");
+    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(1);
+    expect(document.querySelector("#builtin-auto-fib")!.closest("label")!.hidden).toBe(false);
+    expect(activeTab(page.saved()).localIndicators).toEqual(["macd"]);
+    query("nothing-matches");
+    expect(document.querySelector<HTMLElement>("#builtinEmpty")!.hidden).toBe(false);
+    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(0);
+    query("");
+    expect(document.querySelectorAll(".builtin-option:not([hidden])")).toHaveLength(13);
+    expect(document.querySelector<HTMLInputElement>("#builtin-macd")!.checked).toBe(true);
+    expect(localCharts).toHaveLength(instances);
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+  });
+
+  it("supports dropdown keyboard selection, Escape, and outside dismissal", async () => {
+    const page = await mount();
+    click("#lightweightEngine");
+    const toggle = document.querySelector<HTMLButtonElement>("#builtinToggle")!;
+    toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    const search = document.querySelector<HTMLInputElement>("#builtinSearch")!;
+    expect(document.activeElement).toBe(search);
+    search.value = "rsi"; search.dispatchEvent(new Event("input"));
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
+    expect(document.activeElement).toBe(document.querySelector("#builtin-rsi"));
+    search.focus();
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(activeTab(page.saved()).localIndicators).toEqual(["rsi"]);
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    expect(document.querySelector<HTMLElement>("#builtinDropdown")!.hidden).toBe(true);
+    expect(document.activeElement).toBe(toggle);
+    click("#builtinToggle");
+    expect(search.value).toBe("");
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("loads a selected JS file through the host and persists its source", async () => {

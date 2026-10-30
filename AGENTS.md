@@ -13,6 +13,7 @@
 - `src/chartState.ts`：共享类型、规范化、默认指标及旧状态迁移。
 - `src/theme.ts`：Gruvbox 配色与 TradingView widget 参数。
 - `src/webview/main.ts`、`chartCache.ts`：前端交互、命名工作区和图表实例生命周期。
+- `src/webview/indicatorPicker.ts`：可搜索多选下拉、中文别名、键盘/焦点和关闭行为；搜索不得改写指标选择或重建图表。
 - `src/webview/lightweightChart.ts`、`src/marketData.ts`：本地图表与 Binance 公开现货数据。
 - `src/indicators/builtin/`：每个内建指标一个具名 TS 文件，入口只注册；`catalog.ts`、`math.ts`、`types.ts` 分开维护元数据、公共计算和类型，禁止堆成单个大文件。
 - `src/webview/indicatorRunner.ts`：本地 JS Worker（2 秒超时、无 eval）；`widgetLoader.ts`：托管库异步加载与失败重试。

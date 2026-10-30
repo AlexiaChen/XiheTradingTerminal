@@ -47,7 +47,8 @@ src/indicators/
 
 ## 前端与状态
 
-- 在 Lightweight Charts 下使用 Built-in Indicators 原生 details/checkbox；目录只初始化一次，勾选后保留焦点和展开状态。
+- 在 Lightweight Charts 下使用 Built-in Indicators 可搜索多选下拉框；浮层覆盖图表，不挤占图表高度。目录初始化一次，勾选后保留焦点和搜索条件。
+- 搜索名称、ID、参数及中文别名，大小写无关、按空白分词；过滤不清空隐藏项的选择。提供无结果提示、结果数和已选数。方向键导航，搜索框 Enter 切换首项，Escape 关闭并还原焦点；点击外部或切换 Chart/Workspace/引擎关闭。重新打开清空搜索。
 - `ChartTab.localIndicators` 保存有序去重的合法 ID；旧状态无该字段时，把原 Volume/RSI study 映射进来。显式 [] 永远保持关闭，不被旧 study 再次勾回。
 - 本地选择不改变 `studies`，也不使缓存 Widget 失效。附加 study ID 输入框在本地图表中只展示 Widget 保存值，不混作本地选择器。
 - 主图叠加项、副图指标各分组；同一指标多条线共用副图，刷新复用 series。Supertrend 非活动段使用 whitespace，Squeeze 用彩色柱及0轴点。

@@ -80,7 +80,9 @@ Use the **TradingView Widget / Lightweight Charts** tabs to switch engines. Both
 
 ## Built-in local indicators
 
-Select **Lightweight Charts → Built-in Indicators**, then check the presets you want. MA(90) and ZigZag(5%, 10) stay on; optional presets start off in new charts. Each chart saves its own selections, and copying a chart copies those selections independently.
+Select **Lightweight Charts → Built-in Indicators** to open the searchable multi-select dropdown. Search by name, parameters or Chinese keywords (for example, `MACD`, `ATR 10`, `斐波那契` or `布林`), then check the presets you want. Filtering keeps hidden selections intact. Use arrow keys to move through results, Enter in the search box to toggle the first result, and Escape or an outside click to close.
+
+MA(90) and ZigZag(5%, 10) stay on; optional presets start off in new charts. Each chart saves its own selections, and copying a chart copies those selections independently.
 
 | Overlay presets | Separate-pane presets |
 | --- | --- |
@@ -94,7 +96,7 @@ Select **Lightweight Charts → Built-in Indicators**, then check the presets yo
 
 ![Built-in indicator picker with automatic Fibonacci retracement and MACD](doc/assets/builtin-indicators.png)
 
-Feature view: the built-in selector, automatic ZigZag-swing retracement levels, Bollinger Bands and a MACD pane. Checking presets changes only this local chart; its cached Widget and other charts keep their settings.
+Feature view: the searchable dropdown, automatic ZigZag-swing retracement levels, Bollinger Bands and a MACD pane. The dropdown overlays the chart without moving it. Checking presets changes only this local chart; its cached Widget and other charts keep their settings.
 
 **Auto Fib Retracement measures pullback depth within one ZigZag swing.** The swing's endpoint is 0%, its starting point is 100%. Levels are 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6% and 100%; the status line also reports the current retracement percentage. Negative or above-100% readings mean price is outside that swing. This preset has no extension levels, direction predictions or buy/sell signals. Its latest confirmed anchors may change as new swings develop.
 
