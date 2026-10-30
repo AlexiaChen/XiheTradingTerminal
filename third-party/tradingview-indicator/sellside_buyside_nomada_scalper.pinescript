@@ -1,0 +1,351 @@
+//@version=6
+// Levels NomadaScalper · 1.4.0
+// Low stars sit below their candle wicks. Level prices, source logic and hover information preserved.
+// Independent implementation of completed four-hour candle extremes.
+// This is a level map, not a probability model or an entry-signal system.
+// Previous H4 data is delivered on the next H4 interval: [1] + lookahead_on.
+// Solid levels start when observed. A dotted origin segment is retrospective context.
+indicator("SellSide BuySide NomadaScalper", "SellSide BuySide NomadaScalper", overlay=true, max_lines_count=240, max_boxes_count=100, max_labels_count=200)
+
+const string SOURCE_TF = "240"
+const int SOURCE_SECONDS = 14400
+const string G_LEVELS = "Level map"
+const string G_VISUAL = "Presentation"
+const string G_REFERENCES = "Daily / weekly references"
+bool showDaily = input.bool(true, "Previous day high / low", group=G_REFERENCES, tooltip="Blue high and yellow low of the last completed daily candle. The references refresh at the next day and stop extending at first contact. Exchange/session data, not a custom midnight or RTH calculation.")
+bool showWeekly = input.bool(true, "Previous week high / low", group=G_REFERENCES, tooltip="Gold high and low of the last completed weekly candle. The references refresh at the next week and stop extending at first contact. Hover over their stars for the source and price.")
+int levelsPerSide = input.int(3, "Untested levels per side", minval=1, maxval=8, group=G_LEVELS, tooltip="Shows the nearest untested highs and lows. This selects drawings only; all retained levels remain monitored.")
+int sourceLookback = input.int(120, "Source candles retained", minval=10, maxval=240, group=G_LEVELS, tooltip="Rolling source-candle window, limited by the chart's loaded history. Older records expire; equal-price levels are combined visually only.")
+int touchedToShow = input.int(6, "Recent reached levels", minval=0, maxval=12, group=G_LEVELS, tooltip="Reached levels stop at the first chart bar whose high/low reaches or passes the exact level price. Gaps beyond a price also retire it.")
+bool showBands = input.bool(true, "Fine level rails", group=G_VISUAL, tooltip="Decorative bands inside the source candle, 2.5% of its range. They do not change the exact level or its touch condition.")
+bool showOrigins = input.bool(true, "Origin stars", group=G_VISUAL, tooltip="Hover over a star for the level price, source date and status. Stars mark source extremes when available and appear only after source confirmation; the dotted origin segment is retrospective context.")
+int projectBars = input.int(12, "Right projection · chart bars", minval=4, maxval=40, group=G_VISUAL)
+
+float chartSeconds = timeframe.in_seconds()
+if barstate.isfirst
+    if not chart.is_standard or na(chartSeconds)
+        runtime.error("Use standard time-based candles for Levels NomadaScalper.")
+    if chartSeconds > SOURCE_SECONDS or SOURCE_SECONDS % chartSeconds != 0
+        runtime.error("Use H4 or a lower timeframe that divides H4, such as M1, M3, M5, M15, M30, H1 or H2.")
+
+// Confirmed source only. H4 boundaries follow the symbol's exchange/session feed.
+[sourceHigh, sourceLow, sourceOpenTime, sourceCloseTime] = request.security(syminfo.tickerid, SOURCE_TF, [high[1], low[1], time[1], time_close[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+int currentH4 = time(SOURCE_TF)
+
+// Confirmed D/W extremes only: each completed candle is available in the next period.
+// TradingView's daily/weekly feed defines these candles; chart aggregates can differ.
+[dailyHigh, dailyLow, dailyOpen, dailyClose] = request.security(syminfo.tickerid, "1D", [high[1], low[1], time[1], time_close[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+[weeklyHigh, weeklyLow, weeklyOpen, weeklyClose] = request.security(syminfo.tickerid, "1W", [high[1], low[1], time[1], time_close[1]], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+int currentDay = time("1D")
+int currentWeek = time("1W")
+
+type H4Level
+    float price
+    bool upper
+    int originTime
+    int observedAt
+    int sourceOpen
+    int sequence
+    float bandDepth
+    int reachedAt = na
+
+// Four independent references; they never enter H4 selection, retention or alerts.
+type PeriodLevels
+    H4Level highLevel = na
+    H4Level lowLevel = na
+    int lastSourceOpen = na
+    int trackedOpen = na
+    float trackedHigh = na
+    float trackedLow = na
+    int highOrigin = na
+    int lowOrigin = na
+
+f_update_period(PeriodLevels state, float sourceHi, float sourceLo, int sourceOpen, int sourceClose, int currentOpen) =>
+    bool fresh = not na(sourceOpen) and not na(sourceClose) and time >= sourceClose and (na(state.lastSourceOpen) or sourceOpen != state.lastSourceOpen)
+    if fresh
+        state.lastSourceOpen := sourceOpen
+        state.highLevel := na
+        state.lowLevel := na
+        if not na(sourceHi) and not na(sourceLo) and sourceHi >= sourceLo
+            bool trackedSource = not na(state.trackedOpen) and state.trackedOpen == sourceOpen
+            int hiOrigin = trackedSource and state.trackedHigh == sourceHi ? state.highOrigin : time
+            int loOrigin = trackedSource and state.trackedLow == sourceLo ? state.lowOrigin : time
+            state.highLevel := H4Level.new(sourceHi, true, hiOrigin, time, sourceOpen, 0, 0.0)
+            state.lowLevel := H4Level.new(sourceLo, false, loOrigin, time, sourceOpen, 0, 0.0)
+    // Track exact origin bars for presentation only. Equal extremes keep the first bar.
+    if not na(currentOpen)
+        if na(state.trackedOpen) or currentOpen != state.trackedOpen
+            state.trackedOpen := currentOpen
+            state.trackedHigh := high
+            state.trackedLow := low
+            state.highOrigin := time
+            state.lowOrigin := time
+        else
+            if na(state.trackedHigh) or high > state.trackedHigh
+                state.trackedHigh := high
+                state.highOrigin := time
+            if na(state.trackedLow) or low < state.trackedLow
+                state.trackedLow := low
+                state.lowOrigin := time
+    // Exact inclusive contact, including a gap beyond the reference, matches H4 behavior.
+    // The last closed period remains visible after contact until its next replacement.
+    if not na(state.highLevel)
+        H4Level hi = state.highLevel
+        if na(hi.reachedAt) and time >= hi.observedAt and high >= hi.price
+            hi.reachedAt := time
+    if not na(state.lowLevel)
+        H4Level lo = state.lowLevel
+        if na(lo.reachedAt) and time >= lo.observedAt and low <= lo.price
+            lo.reachedAt := time
+    state
+
+var PeriodLevels dayLevels = PeriodLevels.new()
+var PeriodLevels weekLevels = PeriodLevels.new()
+f_update_period(dayLevels, dailyHigh, dailyLow, dailyOpen, dailyClose, currentDay)
+f_update_period(weekLevels, weeklyHigh, weeklyLow, weeklyOpen, weeklyClose, currentWeek)
+
+var array<H4Level> levels = array.new<H4Level>()
+var int sourceSequence = 0
+var int lastSourceOpen = na
+
+// Track the chart bar containing the exact H4 wick. First equal extreme wins.
+// Only presentation uses these timestamps; source prices come from the H4 request.
+var int trackedH4 = na
+var float trackedHigh = na
+var float trackedLow = na
+var int highOrigin = na
+var int lowOrigin = na
+
+bool freshSource = not na(sourceOpenTime) and not na(sourceCloseTime) and time >= sourceCloseTime and (na(lastSourceOpen) or sourceOpenTime != lastSourceOpen)
+if freshSource
+    sourceSequence += 1
+    lastSourceOpen := sourceOpenTime
+    // Keep complete H4 pairs within the chosen data window, including reached records.
+    int expireIndex = array.size(levels) - 1
+    while expireIndex >= 0
+        H4Level old = array.get(levels, expireIndex)
+        if sourceSequence - old.sequence >= sourceLookback
+            array.remove(levels, expireIndex)
+        expireIndex -= 1
+    if not na(sourceHigh) and not na(sourceLow) and sourceHigh > sourceLow
+        bool trackedSource = not na(trackedH4) and trackedH4 == sourceOpenTime
+        int upperOrigin = trackedSource and trackedHigh == sourceHigh ? highOrigin : time
+        int lowerOrigin = trackedSource and trackedLow == sourceLow ? lowOrigin : time
+        float depth = (sourceHigh - sourceLow) * 0.025
+        array.push(levels, H4Level.new(sourceHigh, true, upperOrigin, time, sourceOpenTime, sourceSequence, depth))
+        array.push(levels, H4Level.new(sourceLow, false, lowerOrigin, time, sourceOpenTime, sourceSequence, depth))
+
+if not na(currentH4)
+    if na(trackedH4) or currentH4 != trackedH4
+        trackedH4 := currentH4
+        trackedHigh := high
+        trackedLow := low
+        highOrigin := time
+        lowOrigin := time
+    else
+        if na(trackedHigh) or high > trackedHigh
+            trackedHigh := high
+            highOrigin := time
+        if na(trackedLow) or low < trackedLow
+            trackedLow := low
+            lowOrigin := time
+
+// A touch is inclusive at the exact high/low, not at the decorative band's edge.
+// Checking on each chart update makes first contact visible without waiting for H4.
+bool upperReached = false
+bool lowerReached = false
+int recordCount = array.size(levels)
+if recordCount > 0
+    for i = 0 to recordCount - 1
+        H4Level item = array.get(levels, i)
+        if na(item.reachedAt) and time >= item.observedAt
+            bool reached = item.upper ? high >= item.price : low <= item.price
+            if reached
+                item.reachedAt := time
+                upperReached := upperReached or item.upper
+                lowerReached := lowerReached or not item.upper
+
+// Visible-chart geometry affects presentation only, never the level engine.
+var float visibleHigh = na
+var float visibleLow = na
+if time >= chart.left_visible_bar_time and time <= chart.right_visible_bar_time
+    visibleHigh := na(visibleHigh) ? high : math.max(visibleHigh, high)
+    visibleLow := na(visibleLow) ? low : math.min(visibleLow, low)
+float chartAtr = ta.atr(14)
+
+bool darkChart = 0.2126 * color.r(chart.bg_color) + 0.7152 * color.g(chart.bg_color) + 0.0722 * color.b(chart.bg_color) < 128
+color upperInk = darkChart ? #79BFA8 : #287D6A
+color lowerInk = darkChart ? #D78B94 : #B35265
+color dailyHighInk = darkChart ? #68B3FF : #2476C7
+color dailyLowInk = darkChart ? #F2D84B : #B89C12
+color weeklyInk = darkChart ? #DCB66D : #A77624
+
+var array<line> drawnLines = array.new<line>()
+var array<box> drawnBoxes = array.new<box>()
+var array<label> drawnLabels = array.new<label>()
+
+f_clear_drawings() =>
+    while array.size(drawnLines) > 0
+        line.delete(array.pop(drawnLines))
+    while array.size(drawnBoxes) > 0
+        box.delete(array.pop(drawnBoxes))
+    while array.size(drawnLabels) > 0
+        label.delete(array.pop(drawnLabels))
+
+f_line(int x1, float y1, int x2, float y2, color ink, int width, string style) =>
+    line id = line.new(x1, y1, x2, y2, xloc=xloc.bar_time, color=ink, width=width, style=style)
+    array.push(drawnLines, id)
+
+// Keep each star on its source bar. Low stars use native below-bar placement.
+// A fully transparent upward label anchors its glyph below the wick without a visible box.
+// This changes the marker placement only; level lines and tooltip prices stay exact.
+f_origin(int x, float y, bool upper, color ink, bool active, string tip) =>
+    label star = label.new(x, y, "★", xloc=xloc.bar_time, yloc=upper ? yloc.price : yloc.belowbar, style=upper ? label.style_none : label.style_label_up, color=color.new(ink, 100), textcolor=color.new(ink, active ? 0 : 58), size=12, textalign=text.align_center, tooltip=tip)
+    array.push(drawnLabels, star)
+
+f_draw(H4Level item, bool active, int endTime, float relief) =>
+    color ink = item.upper ? upperInk : lowerInk
+    int rightTime = active ? endTime : item.reachedAt
+    string role = item.upper ? "HIGH" : "LOW"
+    string sourceText = str.format_time(item.sourceOpen, "yyyy-MM-dd HH:mm", syminfo.timezone)
+    string observedText = str.format_time(item.observedAt, "yyyy-MM-dd HH:mm", syminfo.timezone)
+    string stateText = active ? "Untested" : "Reached / passed · " + str.format_time(item.reachedAt, "yyyy-MM-dd HH:mm", syminfo.timezone) + " (chart bar)"
+    string tip = role + " · " + str.tostring(item.price, format.mintick) + "\nSource candle: " + sourceText + "\nAvailable from: " + observedText + "\nStatus: " + stateText + "\nTime zone: " + syminfo.timezone + "\n\nThe star marks the source extreme retrospectively. The solid level begins at observation. A gap beyond the price also counts as reached."
+    if showBands
+        float top = item.upper ? item.price : item.price + item.bandDepth
+        float bottom = item.upper ? item.price - item.bandDepth : item.price
+        box band = box.new(item.observedAt, top, rightTime, bottom, xloc=xloc.bar_time, border_width=0, border_color=color.new(ink, 100), bgcolor=color.new(ink, active ? 94 : 98))
+        float lipTop = item.upper ? top : bottom + item.bandDepth * 0.16
+        float lipBottom = item.upper ? top - item.bandDepth * 0.16 : bottom
+        box lip = box.new(item.observedAt, lipTop, rightTime, lipBottom, xloc=xloc.bar_time, border_width=0, bgcolor=color.new(ink, active ? 87 : 97))
+        array.push(drawnBoxes, band)
+        array.push(drawnBoxes, lip)
+    if item.originTime < item.observedAt
+        f_line(item.originTime, item.price, item.observedAt, item.price, color.new(ink, active ? 52 : 76), 1, line.style_dotted)
+    f_line(item.observedAt, item.price, rightTime, item.price, color.new(ink, active ? 89 : 97), active ? 4 : 2, line.style_solid)
+    f_line(item.observedAt, item.price, rightTime, item.price, color.new(ink, active ? 0 : 67), active ? 2 : 1, active ? line.style_solid : line.style_dotted)
+    float notchHeight = math.min(item.bandDepth, relief * 4)
+    if showOrigins
+        f_origin(item.originTime, item.price, item.upper, ink, active, tip)
+    if active
+        // An inset terminal cap gives the rail its own finish at the true price.
+        f_line(endTime, item.price, endTime, item.price + (item.upper ? -1 : 1) * notchHeight, ink, 2, line.style_solid)
+    if not active
+        // A restrained end tick replaces the large historical contact dot.
+        f_line(rightTime, item.price, rightTime, item.price + (item.upper ? -1 : 1) * notchHeight, color.new(ink, 52), 1, line.style_solid)
+
+// Last-bar presentation only. Rebuild a bounded selection, never one object per record.
+// D/W rails deliberately have no bands: weekly ranges must not create oversized fills.
+f_draw_reference(H4Level item, string periodName, color ink, bool weekly, int endTime, float relief) =>
+    if not na(item)
+        bool active = na(item.reachedAt)
+        int rightTime = active ? endTime : item.reachedAt
+        string role = periodName + (item.upper ? " HIGH" : " LOW")
+        string sourceText = str.format_time(item.sourceOpen, "yyyy-MM-dd HH:mm", syminfo.timezone)
+        string observedText = str.format_time(item.observedAt, "yyyy-MM-dd HH:mm", syminfo.timezone)
+        string stateText = active ? "Untested" : "Reached / passed · " + str.format_time(item.reachedAt, "yyyy-MM-dd HH:mm", syminfo.timezone) + " (chart bar)"
+        string originText = item.originTime < item.observedAt ? "The star marks the source extreme retrospectively." : "Exact source wick not located in loaded chart bars; the star marks availability."
+        string tip = role + " · " + str.tostring(item.price, format.mintick) + "\nLast completed period: " + sourceText + "\nAvailable from: " + observedText + "\nStatus: " + stateText + "\nTime zone: " + syminfo.timezone + "\n\n" + originText + " The level starts at observation and stops at first contact; gaps beyond it also count. This reference is replaced at the next completed period."
+        if item.originTime < item.observedAt
+            f_line(item.originTime, item.price, item.observedAt, item.price, color.new(ink, active ? 45 : 65), 1, line.style_dotted)
+        f_line(item.observedAt, item.price, rightTime, item.price, color.new(ink, active ? 85 : 93), weekly ? 5 : 4, line.style_solid)
+        f_line(item.observedAt, item.price, rightTime, item.price, color.new(ink, active ? 0 : 35), weekly ? 3 : 2, active ? (weekly ? line.style_solid : line.style_dashed) : line.style_dotted)
+        f_line(rightTime, item.price, rightTime, item.price + (item.upper ? -1 : 1) * relief * 3, color.new(ink, active ? 0 : 35), 2, line.style_solid)
+        if showOrigins
+            // Offset only the upper star, never its exact level; lows stay below the wick.
+            f_origin(item.originTime, item.price + (item.upper ? relief * (weekly ? 6 : 3) : 0), item.upper, ink, active, tip)
+
+// Additional D/W budget: at most 16 lines and 4 stars; no boxes.
+// Maximum: 16 live levels + 12 reached = 112 lines, 56 boxes and 28 star labels.
+if barstate.islast
+    f_clear_drawings()
+    array<int> upIds = array.new<int>()
+    array<int> downIds = array.new<int>()
+    array<int> pastIds = array.new<int>()
+    array<float> upKeys = array.new<float>()
+    array<float> downKeys = array.new<float>()
+    array<float> pastKeys = array.new<float>()
+    array<float> seenUp = array.new<float>()
+    array<float> seenDown = array.new<float>()
+    array<float> seenPast = array.new<float>()
+    int totalRecords = array.size(levels)
+    if totalRecords > 0
+        // Newest source represents coincident prices; raw records remain independent.
+        for step = 0 to totalRecords - 1
+            int id = totalRecords - 1 - step
+            H4Level item = array.get(levels, id)
+            if na(item.reachedAt)
+                if item.upper and array.indexof(seenUp, item.price) == -1
+                    array.push(seenUp, item.price)
+                    array.push(upIds, id)
+                    array.push(upKeys, item.price - close)
+                else if not item.upper and array.indexof(seenDown, item.price) == -1
+                    array.push(seenDown, item.price)
+                    array.push(downIds, id)
+                    array.push(downKeys, close - item.price)
+            else if array.indexof(seenPast, item.price) == -1
+                array.push(seenPast, item.price)
+                array.push(pastIds, id)
+                array.push(pastKeys, float(item.reachedAt))
+    array<int> selected = array.new<int>()
+    if array.size(upIds) > 0
+        array<int> orderUp = array.sort_indices(upKeys, order.ascending)
+        for rank = 0 to math.min(levelsPerSide, array.size(orderUp)) - 1
+            array.push(selected, array.get(upIds, array.get(orderUp, rank)))
+    if array.size(downIds) > 0
+        array<int> orderDown = array.sort_indices(downKeys, order.ascending)
+        for rank = 0 to math.min(levelsPerSide, array.size(orderDown)) - 1
+            array.push(selected, array.get(downIds, array.get(orderDown, rank)))
+    int barMs = int(chartSeconds * 1000)
+    int endTime = time_close + projectBars * barMs
+    float span = math.max(nz(visibleHigh - visibleLow, nz(chartAtr, high - low) * 10), syminfo.mintick * 40)
+    float relief = math.max(span * 0.0014, syminfo.mintick * 0.2)
+    if touchedToShow > 0 and array.size(pastIds) > 0
+        array<int> orderPast = array.sort_indices(pastKeys, order.descending)
+        for rank = 0 to math.min(touchedToShow, array.size(orderPast)) - 1
+            H4Level item = array.get(levels, array.get(pastIds, array.get(orderPast, rank)))
+            f_draw(item, false, endTime, relief)
+    int selectedCount = array.size(selected)
+    if selectedCount > 0
+        for i = 0 to selectedCount - 1
+            H4Level item = array.get(levels, array.get(selected, i))
+            f_draw(item, true, endTime, relief)
+    // Weekly underneath daily: both remain distinguishable when their prices coincide.
+    if showWeekly
+        f_draw_reference(weekLevels.highLevel, "WEEKLY", weeklyInk, true, endTime, relief)
+        f_draw_reference(weekLevels.lowLevel, "WEEKLY", weeklyInk, true, endTime, relief)
+    if showDaily
+        f_draw_reference(dayLevels.highLevel, "DAILY", dailyHighInk, false, endTime, relief)
+        f_draw_reference(dayLevels.lowLevel, "DAILY", dailyLowInk, false, endTime, relief)
+
+alertcondition(upperReached, "High reached", "Levels NomadaScalper: price reached or passed a retained high. {{ticker}} · {{interval}}")
+alertcondition(lowerReached, "Low reached", "Levels NomadaScalper: price reached or passed a retained low. {{ticker}} · {{interval}}")
+
+
+// SellSide BuySide NomadaScalper maps untested highs and lows from completed four-hour candles, together with the previous day’s and previous week’s extremes. It provides a structured reference for observing how price approaches and interacts with earlier candle boundaries.
+
+// Each completed four-hour candle contributes its high and low after confirmation. These levels become available during the following four-hour interval. The indicator monitors retained levels and displays the nearest untested highs and lows to keep the chart focused.
+
+// By default, the map displays three untested levels per side, retains a rolling window of 120 four-hour source candles, and shows six recently reached levels. These settings are adjustable. Limiting the number of visible levels does not stop the indicator from monitoring other records within the retained window.
+
+// A high is marked as reached when a subsequent chart candle’s high reaches or exceeds its exact price. A low is marked as reached when a subsequent candle’s low reaches or falls below it. A candle body close is not required. Gaps beyond a level also count as reached, even when no trade at that exact price can be established from the chart data. Once reached, the level stops extending.
+
+// The visual map includes:
+
+// • Green four-hour highs and red four-hour lows.
+// • A blue previous-day high and yellow previous-day low.
+// • Gold previous-week highs and lows.
+// • Optional narrow decorative bands and origin stars with hover information.
+// • Adjustable right projection and a limited selection of recently reached levels.
+
+// The decorative bands occupy 2.5% of their source candle’s range. They do not modify the actual level price or its contact condition. Coincident four-hour prices are combined visually, while their underlying records remain independently monitored.
+
+// Only completed source candles supply level prices. Origin stars and dotted segments may point back to the candle where an extreme formed, but they appear only after source confirmation. This is retrospective context, not an indication that the level was available at that earlier moment. When the exact origin cannot be identified from loaded chart bars, the marker uses the level’s availability time.
+
+// Daily and weekly references follow the symbol’s TradingView exchange and session data. They are not custom midnight or regular-session calculations. Each reference stops extending after contact and remains visible until replaced by the next completed period.
+
+// Use standard time-based charts at four hours or below, with intervals that divide evenly into four hours, such as 1, 3, 5, 15 or 30 minutes, or 1, 2 or 4 hours. Available history and the selected retention window determine which levels can be tracked.
+
+// “High reached” and “Low reached” alerts monitor retained four-hour levels, including levels outside the visible selection. Daily and weekly references do not trigger these alerts. Contact detection updates with the current chart candle.
+
+// The indicator combines proximity-based selection, contact tracking and clearly distinguished source origins in one level map. Buy-side and sell-side terminology refers to price extremes commonly studied as potential liquidity references. The script does not access resting orders or order-book data, verify liquidity concentrations, calculate probabilities, or generate trade-entry recommendations.

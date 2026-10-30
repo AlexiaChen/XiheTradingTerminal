@@ -1,0 +1,237 @@
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+
+//@version=5
+indicator( 'Liquidity Sweeps [LuxAlgo]'
+         , 'LuxAlgo - Liquidity Sweeps'
+         ,  max_lines_count=500
+         ,  max_boxes_count=500
+         ,  overlay=true
+         )
+
+//------------------------------------------------------------------------------
+//Settings
+//-----------------------------------------------------------------------------{
+len    = input.int(5, 'Swings', minval=1, group='Liquidity Sweeps')
+opt    = input.string('Only Wicks', 'options'
+       , options=['Only Wicks', 'Only Outbreaks & Retest', 'Wicks + Outbreaks & Retest'], group='Liquidity Sweeps')
+
+colBl  = input.color(#089981, 'Bull ', group='Liquidity Sweeps', inline='c1')
+colBr  = input.color(#f23645, 'Bear' , group='Liquidity Sweeps', inline='c2')
+colBl2 = input.color(#08998180,  ''  , group='Liquidity Sweeps', inline='c1')
+colBr2 = input.color(#f2364580,  ''  , group='Liquidity Sweeps', inline='c2')
+
+extend = input.bool(true, 'Extend', group='Sweep Area') 
+maxB   = input.int(300, 'Max bars', minval=1, maxval=5000, group='Sweep Area')
+colBl3 = input.color(#08998141, 'Bull ', group='Sweep Area')
+colBr3 = input.color(#f2364541, 'Bear' , group='Sweep Area')
+
+oW = opt == 'Only Wicks'
+oO = opt == 'Only Outbreaks & Retest'
+WO = opt == 'Wicks + Outbreaks & Retest'
+
+n = bar_index 
+
+//-----------------------------------------------------------------------------}      
+//UDT's
+//-----------------------------------------------------------------------------{
+type piv
+    float prc // price
+    int   bix // bar_index
+    bool  brk // broken
+    bool  mit // mitigated
+    bool  tak // taken
+    bool  wic // wick
+    line  lin 
+
+type boxBr 
+    box  bx 
+    line ln
+    bool br
+    int  dr
+
+//-----------------------------------------------------------------------------}      
+//Variables
+//-----------------------------------------------------------------------------{
+var array< piv >aPivH  = array.new< piv >(1, piv.new  ())
+var array< piv >aPivL  = array.new< piv >(1, piv.new  ())
+var array<boxBr>aBoxBr = array.new<boxBr>(1, boxBr.new())
+
+//-----------------------------------------------------------------------------}      
+//Methods - functions
+//-----------------------------------------------------------------------------{
+method n(float piv) => bool out = not na(piv)
+
+method p(piv piv, float val) => float out = (100 / piv.prc * val) - 100
+
+method l(piv get, color c, string s='sd') => 
+    style = switch s 
+        'dt' => line.style_dotted
+        'ds' => line.style_dashed
+        =>      line.style_solid 
+    line.new(get.bix, get.prc, n, get.prc, color=c, style = style)
+
+method br(piv get, color c3, color c, int d) =>
+    y1 = d == 1 ? high : get.prc
+    y2 = d == 1 ? get.prc : low
+    boxBr.new( 
+     box.new(n -1, y1, n +1, y2
+     , border_color
+     = color.new(
+       na, na   )
+     , bgcolor=c3)
+     , line.new(n , y1, n, y2, color=c, width=3)
+     , false
+     , d)
+
+lnDot(y, c) => line.new(n, y, n+3, y, color=c, style=line.style_dotted)
+
+//-----------------------------------------------------------------------------}      
+//Execution
+//-----------------------------------------------------------------------------{
+ph = ta.pivothigh(len, len)
+pl = ta.pivotlow (len, len)
+
+if ph.n() 
+    aPivH.unshift(piv.new(ph, n -len, false, false, false, false))
+
+if pl.n() 
+    aPivL.unshift(piv.new(pl, n -len, false, false, false, false)) 
+
+for i = aPivH.size() -1 to 0
+    get = aPivH.get(i)
+    if not get.mit
+        if not get.brk
+            if close > get.prc 
+                if not oW
+                    get.brk := true
+                else 
+                    get.mit := true
+            if not oO and not get.wic 
+                if high > get.prc and close < get.prc                   
+                    aBoxBr.unshift(get.br(colBr3, colBr, 1))       
+                    get.l(colBr2, 'dt'), lnDot(low, colBr)
+                    get.wic := true  
+        else 
+            if close < get.prc 
+                get.mit := true
+            if not oW and low < get.prc and close > get.prc                    
+                aBoxBr.unshift(get.br(colBl3, colBl, -1))    
+                get.l(colBl2, 'ds'), lnDot(high, colBl)
+                get.tak := true 
+
+    if n - get.bix > 2000 or get.mit or get.tak 
+        aPivH.remove(i).lin.delete()
+
+for i = aPivL.size() -1 to 0
+    get = aPivL.get(i)
+    if not get.mit
+        if not get.brk
+            if close < get.prc 
+                if not oW
+                    get.brk := true
+                else 
+                    get.mit := true
+            if not oO and not get.wic 
+                if low < get.prc and close > get.prc                              
+                    aBoxBr.unshift(get.br(colBl3, colBl, -1))     
+                    get.l(colBl2, 'dt'), lnDot(high, colBl)
+                    get.wic := true 
+        else 
+            if close > get.prc 
+                get.mit := true
+            if not oW and high > get.prc and close < get.prc                     
+                aBoxBr.unshift(get.br(colBr3, colBr, 1))    
+                get.l(colBr2, 'ds'), lnDot(low, colBr)
+                get.tak := true  
+
+    if n - get.bix > 2000 or get.mit or get.tak 
+        aPivL.remove(i).lin.delete()
+
+if extend
+    for bx in aBoxBr 
+        if not bx.br and n - bx.bx.get_left() -1 <= maxB 
+            bx.bx.set_right(bar_index)
+            if bx.dr == -1 and close < bx.bx.get_bottom() 
+                bx.br := true 
+            if bx.dr ==  1 and close > bx.bx.get_top   () 
+                bx.br := true 
+
+//-----------------------------------------------------------------------------} 
+
+// The Liquidity Sweeps indicator detects the presence of liquidity sweeps on the user's chart, while also providing potential areas of support/resistance or entry when Liquidity levels are taken.
+
+// In the event of a Liquidity Sweep a Sweep Area is created which may provide further areas of interest.
+
+// 🔶 USAGE
+
+// A Liquidity Sweep occurs when the price breaks through a liquidity level (further referred to as LqL), after which the price returns below/above the liquidity level, forming a wick.
+
+// The script provides 2 options when this can happen:
+
+// A wick passes a LqL after which the price quickly returns.
+// First the closing price breaks through a LqL. After a while, the price retests the LqL and forms a wick in the opposite direction.
+
+// 快照
+
+// 快照
+
+// The examples above show a bullish and bearish scenario of "a wick passing through an LqL where the price quickly comes back". This type of Liquidity Sweep is represented by a dotted line.
+
+// The following example shows a broken LqL, where the price retests the Liquidity zone and bounces back.
+
+// 快照
+
+// Instead of a dotted line, this type of Liquidity Sweep is represented by a dashed line.
+
+// When a Liquidity Sweep takes place, this is indicated by highlighting the "wick-LqL" distance. This distance is also the basis for the Sweep Area (see next sub-section). A small 3-bar long dotted line starts from the opposite wick as an extra aid to determine potential support/resistance/entry, ...
+
+// 快照
+
+// Colors can be set in the settings (here yellow and aqua blue instead of default colors for clarity).
+
+// 🔹 Sweep Areas
+
+// The distance between the LqL and the maximum limit of the wick forms a Sweep Area, which can provide a potential support/resistance or entry zone.
+
+// 快照
+
+// 快照
+
+// These examples show both types of Liquidity Sweeps, followed by a box indicating the Sweep Area.
+
+// When the Sweep Area is mitigated or a certain amount of bars has passed (Settings - 'Max bars'), the boxes will no longer be updated.
+
+// 快照
+
+// 快照
+
+// In this case, the 'Trigger' label shows the bar where the high crossed a LqL, after which a red box starts between LqL and high.
+
+// The low of the 'Trigger' bar is the starting point of a short dotted line. Next to the 'Trigger bar' the high touches the Sweep Area before returning, providing a potential short entry. One bar further, another entry opportunity presents itself when the price breaks the small dotted line.
+
+// In the following bullish example, not only do we see opportunities when theLqL has been swept, but the following Sweep Area provides some potential entries.
+
+// The small green dotted lines also act as a guide where the price breaks above, then forms a small range, after which the price continues in an upward direction.
+
+// 快照
+
+// 快照
+
+// Here, the initial trigger on the left forms a Sweep Area that is quickly broken. However, the small green line provides a potential entry area later on. The price moves in a short channel before breaking above the LqL (green dashed line), providing more potential entries. Price retests this LqL, and goes below this level. The price remained around the previously formed channel, after which the price resumed its upward trend.
+
+// 🔶 SETTINGS
+
+// 🔹 Liquidity Sweeps
+
+// Swings: Period used for the swing detection, with higher values returning longer term Liquidity Levels.
+// Options:
+// - Only Wicks: Only detects a Liquidity Sweep when a wick sweeps a previous wick
+// - Only Outbreaks & Retest: Only detects a Liquidity Sweep when the price breaks a Liquidity Level, returns & retests the Liquidity Level, and forms a wick in the opposite direction.
+// - Wicks + Outbreaks & Retest: Both options can be detected.
+
+// 🔹 Sweep Area
+
+// Extend: Enables/Disables extension of the Sweep Area boxes.
+// Max Bars: Limit the extension to a certain number of bars.
+// Color Sweep Area box.

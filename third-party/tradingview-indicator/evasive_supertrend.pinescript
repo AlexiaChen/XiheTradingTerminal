@@ -1,0 +1,158 @@
+// This work is licensed under a Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) https://creativecommons.org/licenses/by-nc-sa/4.0/
+// © LuxAlgo
+
+//@version=6
+indicator("Evasive SuperTrend [LuxAlgo]", "LuxAlgo - Evasive SuperTrend", overlay = true, max_labels_count = 500)
+
+//---------------------------------------------------------------------------------------------------------------------}
+// Constants
+//---------------------------------------------------------------------------------------------------------------------{
+color BULL_COLOR            = #089981
+color BEAR_COLOR            = #f23645
+
+//---------------------------------------------------------------------------------------------------------------------}
+// Inputs
+//---------------------------------------------------------------------------------------------------------------------{
+string ST_GROUP             = 'Supertrend Settings'
+int lengthInput             = input.int(10, 'ATR Length', minval = 1, group = ST_GROUP)
+float multiplierInput       = input.float(3.0, 'Base Multiplier', minval = 0.1, step = 0.1, group = ST_GROUP)
+
+string NOISE_GROUP          = 'Noise Avoidance Logic'
+float thresholdInput        = input.float(1.0, 'Noise Threshold (xATR)', minval = 0.1, step = 0.1, group = NOISE_GROUP, tooltip = 'If price gets closer to the band than this value, the band is pushed away.')
+float alphaInput            = input.float(0.5, 'Expansion Alpha (xATR)', minval = 0, step = 0.1, group = NOISE_GROUP, tooltip = 'Distance (in ATRs) to push the band away when noise is detected.')
+
+string VISUAL_GROUP         = 'Visualization'
+bool showLabelsInput        = input.bool(true, 'Show Signal Labels', group = VISUAL_GROUP)
+bool showFillsInput         = input.bool(true, 'Show Gradient Fills', group = VISUAL_GROUP)
+
+//---------------------------------------------------------------------------------------------------------------------}
+// Core Calculations
+//---------------------------------------------------------------------------------------------------------------------{
+// ATR Calculation
+float atr = ta.atr(lengthInput)
+
+// Supertrend Variables
+var float stBand      = na
+var int trend         = 1 // 1 for Bull, -1 for Bear
+
+float src = hl2
+float upperBase = src + multiplierInput * atr
+float lowerBase = src - multiplierInput * atr
+
+// Previous Band (needed for noise check)
+float prevBand = nz(stBand[1], trend == 1 ? lowerBase : upperBase)
+
+// Noise Avoidance Condition
+// Logic: If price is closer to the band than (ATR * threshold), it's noisy
+bool isNoisy = math.abs(close - prevBand) < (atr * thresholdInput)
+
+// Band Calculation with Adaptive Expansion
+if trend == 1
+    // BULL TREND: If noisy, move band DOWN (away from price). 
+    // This overrides the standard "only move up" math.max rule.
+    if isNoisy
+        stBand := prevBand - (atr * alphaInput)
+    else
+        stBand := math.max(lowerBase, prevBand)
+    
+    // Check for Trend Flip
+    if close < stBand
+        trend := -1
+        stBand := upperBase
+else
+    // BEAR TREND: If noisy, move band UP (away from price).
+    // This overrides the standard "only move down" math.min rule.
+    if isNoisy
+        stBand := prevBand + (atr * alphaInput)
+    else
+        stBand := math.min(upperBase, prevBand)
+    
+    // Check for Trend Flip
+    if close > stBand
+        trend := 1
+        stBand := lowerBase
+
+bool trendChanged = trend != trend[1]
+
+//---------------------------------------------------------------------------------------------------------------------}
+// Visuals
+//---------------------------------------------------------------------------------------------------------------------{
+color stColor = trend == 1 ? BULL_COLOR : BEAR_COLOR
+
+// Switch Dot
+plot(trendChanged ? stBand : na, "Trend Switch Dot", color = stColor, style = plot.style_circles, linewidth = 4, join = false)
+
+// Main Band - Two plots used to handle conditional line styles (Solid vs Dotted)
+// Invisible plot used as anchor for the gradient fill
+plotId = plot(stBand, "Band for Fill", color = na)
+
+// Solid Line (Normal mode) - style_linebr prevents gaps when switching to dotted
+plot(isNoisy ? na : stBand, "Solid Band", color = stColor, linewidth = 2, style = plot.style_linebr)
+
+// Dotted Line (Expansion/Noise mode)
+plot(isNoisy ? stBand : na, "Dotted Band", color = stColor, linewidth = 2, style = plot.style_linebr, linestyle = plot.linestyle_dotted)
+
+srcId  = plot(src, "Source", color = na)
+
+// Gradient Fill (Strictly following: less transparent near price)
+float topValue    = math.max(src, stBand)
+float bottomValue = math.min(src, stBand)
+color topFillColor    = trend == 1 ? color.new(BULL_COLOR, 50) : color.new(BEAR_COLOR, 100)
+color bottomFillColor = trend == 1 ? color.new(BULL_COLOR, 100) : color.new(BEAR_COLOR, 50)
+
+fill(plotId, srcId, topValue, bottomValue, topFillColor, bottomFillColor, 
+     title   = "Trend Fill", 
+     display = showFillsInput ? display.all : display.none)
+
+// Signal Labels
+if showLabelsInput and trendChanged
+    label.new(bar_index, stBand, 
+         text = trend == 1 ? "BULL" : "BEAR", 
+         color = stColor, 
+         textcolor = #FFFFFF, 
+         style = trend == 1 ? label.style_label_up : label.style_label_down, 
+         size = size.tiny)
+
+//---------------------------------------------------------------------------------------------------------------------}
+
+
+// The Evasive SuperTrend indicator provides a modernized approach to trend following by implementing a unique "evasive" logic designed to reduce premature trend flips during periods of high market noise and consolidation.
+
+// Unlike the traditional SuperTrend which can only move closer to the price (or stay flat), this tool identifies when price action gets too close to the volatility band and "evades" the price by pushing the band further away, effectively giving the current trend more breathing room.
+
+// 🔶 USAGE
+
+// The indicator can be used similarly to a standard SuperTrend to identify trend direction and potential trailing stop levels, but with added intelligence regarding market noise.
+
+// 🔹 Identifying Trend and Noise
+
+// Solid Line: Indicates a standard trend phase where the price is maintaining a healthy distance from the volatility band.
+// Dotted Line: Indicates the "Evasive" mode is active. This occurs when price action enters a "Noise Zone," causing the indicator to proactively push the band away to prevent a false breakout.
+// Gradient Fill: The background fill provides a visual heat map of the trend strength relative to the source price, with higher transparency indicating proximity to a potential trend flip.
+
+// 🔹 Trading Signals
+
+// Users can look for "BULL" and "BEAR" labels which mark the points where price successfully penetrates the evasive band. Because the band actively retreats during noise, a trend flip often carries more significance as it requires price to overcome an adaptive volatility threshold.
+
+// 🔶 DETAILS
+
+// The core innovation of this script is the "Noise Avoidance Logic." Standard SuperTrends are strictly monotonic (they only move up in a bull trend and down in a bear trend). This often leads to "whipsaws" where a minor price spike touches the band and flips the trend unnecessarily.
+
+// The Evasive SuperTrend calculates a Noise Threshold. If the distance between the price and the band is less than this threshold (calculated in ATR units), the band is pushed back by a specified Expansion Alpha. This allows the trend to persist through choppy sideways movement that would otherwise trigger a reversal.
+
+// 🔶 SETTINGS
+
+// 🔹 Supertrend Settings
+
+// ATR Length: Determines the lookback period for the Average True Range calculation used to set the band distance.
+// Base Multiplier: Sets the initial distance of the band from the price. Higher values result in fewer, longer-term trend signals.
+
+// 🔹 Noise Avoidance Logic
+
+// Noise Threshold (xATR): Defines the "danger zone" around the band. If price enters this ATR-based range, the band begins to evade.
+// Expansion Alpha (xATR): The distance the band moves away from the price when noise is detected. Higher values make the indicator more "stubborn" against trend changes.
+
+// 🔹 Visualization
+
+// Show Signal Labels: Toggles the visibility of the BULL and BEAR trend change labels.
+// Show Gradient Fills: Toggles the dynamic background coloring between the price and the band.
