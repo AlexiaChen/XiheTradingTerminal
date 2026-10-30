@@ -7,5 +7,6 @@
 !out/*.css
 !media/**
 !doc/assets/**
+!doc/indicators.md
 !third-party/**
 !examples/indicators/*.js

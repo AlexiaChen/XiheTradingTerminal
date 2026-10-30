@@ -94,7 +94,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
         </select>
       </div>
       <div class="stack">
-        <label for="studiesInput">Additional indicators (comma list)</label>
+        <label id="studiesLabel" for="studiesInput">Additional indicators (comma list)</label>
         <input id="studiesInput" class="tv-input" placeholder="RSI@tv-basicstudies" />
       </div>
       <div class="stack">
@@ -111,6 +111,12 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div id="chartNotice" class="chart-notice" role="status" hidden></div>
     <div id="localTools" class="local-tools" hidden>
+      <details id="builtinPicker" class="builtin-picker">
+        <summary>Built-in Indicators <span id="builtinCount"></span></summary>
+        <p class="builtin-required">Always on: ZigZag (5%, 10) · MA (90)</p>
+        <div id="builtinOptions" class="builtin-options"></div>
+        <p class="builtin-required">Local JS presets only. Selections are saved per chart.</p>
+      </details>
       <button id="loadIndicator" class="tv-btn" type="button">Load JS Indicator</button>
       <span id="customIndicators" class="indicator-list"></span>
       <span class="local-help">Binance spot · JavaScript indicators · no Pine Script</span>

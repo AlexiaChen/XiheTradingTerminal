@@ -13,7 +13,8 @@
 - `src/chartState.ts`：共享类型、规范化、默认指标及旧状态迁移。
 - `src/theme.ts`：Gruvbox 配色与 TradingView widget 参数。
 - `src/webview/main.ts`、`chartCache.ts`：前端交互、命名工作区和图表实例生命周期。
-- `src/webview/lightweightChart.ts`、`src/marketData.ts`、`src/indicators.ts`：本地图表、Binance 公开现货数据和默认指标。
+- `src/webview/lightweightChart.ts`、`src/marketData.ts`：本地图表与 Binance 公开现货数据。
+- `src/indicators/builtin/`：每个内建指标一个具名 TS 文件，入口只注册；`catalog.ts`、`math.ts`、`types.ts` 分开维护元数据、公共计算和类型，禁止堆成单个大文件。
 - `src/webview/indicatorRunner.ts`：本地 JS Worker（2 秒超时、无 eval）；`widgetLoader.ts`：托管库异步加载与失败重试。
 - `src/webview/styles.css`：Tailwind CSS 4 主题变量和组件样式；不要另建平行的手写布局体系。
 - `vite.config.mts`：扩展 CJS 和 Webview IIFE/CSS 两个构建模式。
@@ -31,6 +32,7 @@
 - 第二引擎为官方开源 Lightweight Charts，使用独立切换 Tab；按 workspace/chart/engine 缓存实例。保留旧状态，默认 widget。
 - 本地仅支持 BINANCE 现货、UTC、最近 1,000 根；6h/8h 原生请求，Widget 的周期回退提示只对 Widget 生效。隐藏/失败后恢复须补齐历史。
 - JS 指标只在可信工程中由用户选文件；保存源快照，Worker 计算并验证输出、超时和取消。不可宣称 Pine Script 或完整画线工具支持；第三方许可证随包分发。
+- 内建预设按 Chart 保存到 localIndicators；默认额外项为空，兼容迁移旧 Volume/RSI。Fib 只量最近已确认 ZigZag 波段的回撤，结束点0%、起点100%；不混入扩展位或方向预测，锚点移动和超界读数应如实说明。
 - 保留 nonce CSP、初始 JSON 的 `<` 转义和文本节点渲染；不通过跨域 DOM 注入来修改图表。
 - Gruvbox 默认雾蓝涨、麦黄跌，参考相邻 `kline-trainer` 的实际源码。
 

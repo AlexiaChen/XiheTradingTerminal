@@ -16,6 +16,8 @@ with ZipFile(package) as archive:
         "extension/doc/assets/gruvbox-dark.png",
         "extension/doc/assets/gruvbox-light.png",
         "extension/doc/assets/lightweight-dark.png",
+        "extension/doc/assets/builtin-indicators.png",
+        "extension/doc/indicators.md",
         "extension/examples/indicators/ema-20.js",
         "extension/third-party/lightweight-charts-LICENSE.txt",
         "extension/third-party/lightweight-charts-NOTICE.txt",
@@ -36,6 +38,7 @@ with ZipFile(package) as archive:
         "media/xihe.png", "media/icon.svg",
         "doc/assets/gruvbox-dark.png", "doc/assets/gruvbox-light.png",
         "doc/assets/lightweight-dark.png", "examples/indicators/ema-20.js",
+        "doc/assets/builtin-indicators.png", "doc/indicators.md",
         "third-party/lightweight-charts-LICENSE.txt", "third-party/lightweight-charts-NOTICE.txt",
         "third-party/fancy-canvas-LICENSE.txt",
     ):

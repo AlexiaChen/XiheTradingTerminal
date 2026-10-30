@@ -1,3 +1,5 @@
+import { normalizeLocalIndicators, type BuiltinIndicatorId } from "./indicators/catalog";
+
 export type Theme = "dark" | "light";
 export type ChartEngine = "widget" | "lightweight";
 export type CustomIndicator = { id: string; name: string; source: string };
@@ -11,6 +13,7 @@ export type ChartTab = {
   timezone: string;
   engine: ChartEngine;
   customIndicators: CustomIndicator[];
+  localIndicators: BuiltinIndicatorId[];
 };
 export type ChartWorkspace = { id: string; name: string; tabs: ChartTab[]; activeTabId: string };
 export type TradingViewState = {
@@ -43,7 +46,7 @@ export function normalizeStudies(raw: unknown): string[] {
 }
 
 export function createTab(id: string, name = "Main"): ChartTab {
-  return { id, name, symbol: DEFAULT_SYMBOL, interval: DEFAULT_INTERVAL, studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC", engine: "widget", customIndicators: [] };
+  return { id, name, symbol: DEFAULT_SYMBOL, interval: DEFAULT_INTERVAL, studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC", engine: "widget", customIndicators: [], localIndicators: [] };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -82,7 +85,8 @@ export function normalizeState(raw: unknown): TradingViewState {
         theme: tab.theme === "light" ? "light" : "dark",
         timezone: text(tab.timezone, "Etc/UTC"),
         engine: tab.engine === "lightweight" ? "lightweight" : "widget",
-        customIndicators: normalizeCustomIndicators(tab.customIndicators)
+        customIndicators: normalizeCustomIndicators(tab.customIndicators),
+        localIndicators: normalizeLocalIndicators(tab.localIndicators, tab.studies)
       };
     });
     if (!tabs.length) { tabs.push(createTab("tab-1")); }

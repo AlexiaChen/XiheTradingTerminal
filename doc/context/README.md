@@ -16,7 +16,8 @@ doc/context/
 │   ├── indicators.md
 │   ├── intervals.md
 │   ├── theme.md
-│   └── chart-engines.md
+│   ├── chart-engines.md
+│   └── builtin-indicators.md
 └── development/
     ├── toolchain.md
     └── validation.md
@@ -26,6 +27,7 @@ doc/context/
 - 架构：[扩展和前端](architecture/extension.md)、[状态及迁移](architecture/state.md)
 - 功能：[工作区与标签](features/workspaces.md)、[默认指标](features/indicators.md)、[周期](features/intervals.md)、[Gruvbox](features/theme.md)
 - 双引擎：[开源选型、行情和本地 JS 指标](features/chart-engines.md)
+- 内建指标：[独立 TS 目录、公式、斐波那契回撤与保存](features/builtin-indicators.md)
 - 开发：[工具链选择](development/toolchain.md)、[验证、打包与 CI](development/validation.md)
 
 协作约定见 [AGENTS.md](../../AGENTS.md)。新增上下文按主题归档并更新索引；旧结论被新证据推翻时应明确修正。

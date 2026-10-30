@@ -8,12 +8,17 @@ A chart workspace for VS Code, with named workspaces, independent chart tabs, an
 
 ![Lightweight Charts with ETH 4H candles, MA 90, ZigZag and a local EMA 20 indicator](doc/assets/lightweight-dark.png)
 
+Overview: named workspaces, chart tabs, engine tabs and Gruvbox candles, with local indicators beside your code.
+
 ![Gruvbox Dark workspace with named chart tabs, ZigZag and MA 90](doc/assets/gruvbox-dark.png)
+
+The hosted Widget engine keeps TradingView's chart controls and drawing tools. Both engines share the same workspace shell and candle palette.
 
 ## Features
 
 - **Two chart-engine tabs:** choose **TradingView Widget** or **Lightweight Charts** for each chart. Switching engines preserves both instances; chart and workspace tabs remain independent.
 - **Local JavaScript indicators:** load a `.js` file into a Lightweight chart. Indicator code and names are saved with that chart. Computation runs in a Worker with a two-second limit.
+- **Built-in local indicators:** select from 13 optional presets without writing a file, including Auto Fib Retracement, EMA Ribbon, Bollinger Bands, Supertrend, MACD and Squeeze Momentum. Selections are saved independently for each chart.
 - **Native Binance spot intervals:** local charts load public Binance candles, including real **6h / 8h** bars, with MA(90) and ZigZag(5%, 10). The latest 1,000 bars load initially; the visible chart polls every 15 seconds. Hidden charts pause polling and catch up when shown.
 - **Named workspaces:** group charts by market, strategy, or trading session. Create, switch, rename, and remove workspaces inside the sidebar.
 - **Independent chart tabs:** rename charts with the pencil button or a double-click. Each tab keeps its symbol, interval, theme, and additional indicators.
@@ -31,7 +36,7 @@ A chart workspace for VS Code, with named workspaces, independent chart tabs, an
 
 </details>
 
-Screenshots show the built Webview running in a browser with a preview-only VS Code API shim and the real TradingView hosted chart.
+Screenshots show the built Webview in a browser with a preview-only VS Code API shim: the real hosted Widget, or Lightweight Charts rendering real Binance spot candles.
 
 ## Install locally
 
@@ -49,7 +54,7 @@ The packaging tool, `@vscode/vsce`, is installed as a local development dependen
 The installer is written to:
 
 ```text
-dist/xihe-trading-terminal-0.0.3.vsix
+dist/xihe-trading-terminal-0.0.4.vsix
 ```
 
 Extension ID: `AlexiaChen.xihe-trading-terminal`. This renamed extension has a separate identity from the original TradingView Sidebar; its saved settings are not automatically shared with that extension.
@@ -71,7 +76,29 @@ If you build in WSL and use VS Code on Windows, select the file from the host VS
 4. Choose an interval and a Gruvbox theme. ZigZag and MA 90 are included automatically; use **Additional indicators** for supported built-in IDs, such as `RSI@tv-basicstudies`.
 5. Use **Hide Settings** to maximize the chart. At least one workspace and one chart are retained.
 
-Use the **TradingView Widget / Lightweight Charts** tabs to switch engines. Both use the same symbol, interval, theme, and mandatory indicator presets. Local charts support `BINANCE:` spot symbols; use the Widget for other exchanges, futures or stocks. Existing additional indicators are retained: local charts render Volume and RSI(14), and explicitly list other saved study IDs as Widget-only.
+Use the **TradingView Widget / Lightweight Charts** tabs to switch engines. Both use the same symbol, interval, theme, and mandatory indicator presets. Local charts support `BINANCE:` spot symbols; use the Widget for other exchanges, futures or stocks. Widget study IDs remain saved. Existing local Volume/RSI settings migrate into the local picker; future local changes use the picker, while **Additional indicators** edits the Widget.
+
+## Built-in local indicators
+
+Select **Lightweight Charts → Built-in Indicators**, then check the presets you want. MA(90) and ZigZag(5%, 10) stay on; optional presets start off in new charts. Each chart saves its own selections, and copying a chart copies those selections independently.
+
+| Overlay presets | Separate-pane presets |
+| --- | --- |
+| Auto Fib Retracement: latest confirmed ZigZag swing | Volume |
+| EMA Ribbon: 20 / 50 / 200 | RSI: Wilder 14 |
+| Bollinger Bands: SMA20, 2σ | MACD: 12 / 26 / 9 |
+| Donchian Channels: 20 | Stochastic: 14 / 3 / 3 |
+| Keltner Channels: EMA20, ATR10 × 2 | ATR: Wilder 14 |
+| Supertrend: ATR10 × 3 | Squeeze Momentum: 20, BB2, KC1.5 |
+| Session VWAP: HLC3, UTC day | |
+
+![Built-in indicator picker with automatic Fibonacci retracement and MACD](doc/assets/builtin-indicators.png)
+
+Feature view: the built-in selector, automatic ZigZag-swing retracement levels, Bollinger Bands and a MACD pane. Checking presets changes only this local chart; its cached Widget and other charts keep their settings.
+
+**Auto Fib Retracement measures pullback depth within one ZigZag swing.** The swing's endpoint is 0%, its starting point is 100%. Levels are 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6% and 100%; the status line also reports the current retracement percentage. Negative or above-100% readings mean price is outside that swing. This preset has no extension levels, direction predictions or buy/sell signals. Its latest confirmed anchors may change as new swings develop.
+
+These are independently implemented JS formulas with fixed, visible presets. Squeeze Momentum follows the public BB/Keltner compression and regression-momentum concept popularized by LazyBear. Session VWAP is intraday-only and omits a truncated first day. See [formulas, initialization and TradingView references](doc/indicators.md) for the full conventions; parity with a particular Pine script is not assumed. Source files live individually in `src/indicators/builtin/`.
 
 ## Write a local JavaScript indicator
 

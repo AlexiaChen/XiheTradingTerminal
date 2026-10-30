@@ -8,7 +8,16 @@ describe("workspace state", () => {
     expect(state.workspaces).toHaveLength(1);
     expect(activeTab(state)).toMatchObject({ symbol: "BINANCE:ETHUSDT", interval: "240", theme: "dark", studies: REQUIRED_STUDIES });
     expect(state.ui.isToolbarCollapsed).toBe(true);
+    expect(activeTab(state).localIndicators).toEqual([]);
     expect(normalizeState({ ui: { isToolbarCollapsed: false } }).ui.isToolbarCollapsed).toBe(false);
+  });
+
+  it("migrates legacy local Volume/RSI once and preserves an explicit empty selection", () => {
+    const legacy = normalizeState({ tabs: [{ studies: ["Volume@tv-basicstudies", "RSI@tv-basicstudies"] }] });
+    expect(activeTab(legacy).localIndicators).toEqual(["volume", "rsi"]);
+    activeTab(legacy).localIndicators = [];
+    expect(activeTab(normalizeState(legacy)).localIndicators).toEqual([]);
+    expect(activeTab(legacy).studies).toContain("RSI@tv-basicstudies");
   });
 
   it("migrates old tabs without losing independent indicators or configuration", () => {

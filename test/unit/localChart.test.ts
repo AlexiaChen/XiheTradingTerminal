@@ -5,14 +5,16 @@ import { createLightweightChart } from "../../src/webview/lightweightChart";
 
 const chart = vi.hoisted(() => ({
   addSeries: vi.fn(), remove: vi.fn(), removeSeries: vi.fn(),
-  timeScale: () => ({ setVisibleLogicalRange: vi.fn() })
+  timeScale: () => ({ setVisibleLogicalRange: vi.fn() }),
+  panes: () => [{ setStretchFactor: vi.fn() }]
 }));
 vi.mock("lightweight-charts", () => ({
   createChart: () => chart,
-  CandlestickSeries: "candle", LineSeries: "line", HistogramSeries: "histogram", ColorType: { Solid: "solid" }
+  CandlestickSeries: "candle", LineSeries: "line", HistogramSeries: "histogram", ColorType: { Solid: "solid" }, LineStyle: { Dashed: 2 }
 }));
 beforeEach(() => {
   vi.useFakeTimers();
+  chart.addSeries.mockClear();
   document.body.innerHTML = '<div id="local"></div>';
   vi.spyOn(document, "hidden", "get").mockReturnValue(false);
   chart.addSeries.mockImplementation(() => ({ setData: vi.fn(), applyOptions: vi.fn() }));
@@ -21,6 +23,21 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("local chart polling", () => {
+  it("adds all preset plots, preserves whitespace and reuses series while polling", async () => {
+    const tab = activeTab(normalizeState(undefined));
+    tab.localIndicators = ["bollinger", "macd", "supertrend", "squeeze"];
+    const values = Array.from({ length: 100 }, (_, i) => [1000 + i * 60000, "100", "101", "99", "100", "10"]);
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => values } as Response);
+    const view = createLightweightChart(tab, "local", true);
+    await vi.advanceTimersByTimeAsync(0);
+    // Three required series, plus BB3 / MACD3 / Supertrend2 / Squeeze2.
+    expect(chart.addSeries).toHaveBeenCalledTimes(13);
+    expect(document.querySelector(".local-legend")!.textContent).toContain("Squeeze Momentum");
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(chart.addSeries).toHaveBeenCalledTimes(13);
+    view.remove();
+  });
+
   it("pauses hidden instances and fetches history on resume, then removes all timers", async () => {
     const tab = activeTab(normalizeState(undefined));
     const view = createLightweightChart(tab, "local", true);

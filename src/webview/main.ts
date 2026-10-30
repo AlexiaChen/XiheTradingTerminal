@@ -4,6 +4,7 @@ import { widgetOptions } from "../theme";
 import { ChartCache } from "./chartCache";
 import { createWidgetLoader } from "./widgetLoader";
 import { createLightweightChart } from "./lightweightChart";
+import { BUILTIN_INDICATORS, normalizeLocalIndicators } from "../indicators/catalog";
 import "./styles.css";
 
 declare function acquireVsCodeApi(): {
@@ -126,6 +127,8 @@ function render() {
   symbolInput.value = tab.symbol;
   intervalSelect.value = tab.interval;
   studiesInput.value = tab.studies.filter(study => !REQUIRED_STUDIES.includes(study)).join(", ");
+  studiesInput.disabled = tab.engine === "lightweight";
+  element("studiesLabel").textContent = tab.engine === "lightweight" ? "Widget indicators (switch to Widget to edit)" : "Additional indicators (comma list)";
   for (const node of element("themeToggle").querySelectorAll<HTMLButtonElement>("button")) {
     node.classList.toggle("active", node.dataset.theme === tab.theme);
   }
@@ -155,6 +158,8 @@ function render() {
     return chip;
   }));
   element<HTMLButtonElement>("loadIndicator").disabled = tab.customIndicators.length >= MAX_INDICATORS;
+  element("builtinCount").textContent = tab.localIndicators.length ? `(${tab.localIndicators.length})` : "";
+  for (const item of BUILTIN_INDICATORS) { element<HTMLInputElement>(`builtin-${item.id}`).checked = tab.localIndicators.includes(item.id); }
   cache.retain(new Set(state.workspaces.flatMap(item => item.tabs.flatMap(chart => ["widget", "lightweight"].map(engine => JSON.stringify([item.id, chart.id, engine]))))));
   showChart();
 }
@@ -237,7 +242,7 @@ window.addEventListener("message", event => {
 element("addTab").addEventListener("click", () => {
   const workspace = activeWorkspace(state);
   const base = activeTab(state);
-  const tab = { ...base, id: newId(), name: `Chart ${workspace.tabs.length + 1}`, studies: [...base.studies], customIndicators: base.customIndicators.map(indicator => ({ ...indicator })) };
+  const tab = { ...base, id: newId(), name: `Chart ${workspace.tabs.length + 1}`, studies: [...base.studies], customIndicators: base.customIndicators.map(indicator => ({ ...indicator })), localIndicators: [...base.localIndicators] };
   workspace.tabs.push(tab); workspace.activeTabId = tab.id;
   persist(); render();
 });
@@ -271,4 +276,22 @@ function flushInputs() {
 }
 document.addEventListener("visibilitychange", () => { if (document.hidden) { flushInputs(); } });
 window.addEventListener("beforeunload", flushInputs);
+// Build controls once so toggling an indicator keeps keyboard focus and the details panel open.
+for (const item of BUILTIN_INDICATORS) {
+  const label = document.createElement("label");
+  label.className = "builtin-option";
+  const input = document.createElement("input");
+  input.type = "checkbox"; input.id = `builtin-${item.id}`;
+  const text = document.createElement("span");
+  const name = document.createElement("strong"); name.textContent = item.name;
+  const description = document.createElement("small"); description.textContent = `${item.pane ? "Separate pane" : "Overlay"} · ${item.parameters}`;
+  text.append(name, description);
+  label.append(input, text);
+  element("builtinOptions").append(label);
+  input.addEventListener("change", () => {
+    const tab = activeTab(state);
+    tab.localIndicators = normalizeLocalIndicators(input.checked ? [...tab.localIndicators, item.id] : tab.localIndicators.filter(id => id !== item.id));
+    persist(); render();
+  });
+}
 persist(); render();

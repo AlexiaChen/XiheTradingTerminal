@@ -70,6 +70,32 @@ function rename(name: string) {
 beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localCharts.length = 0; });
 
 describe("terminal Webview interactions", () => {
+  it("saves built-in selections per chart and preserves the picker and hosted instance", async () => {
+    const page = await mount();
+    click("#lightweightEngine");
+    const picker = document.querySelector<HTMLDetailsElement>("#builtinPicker")!;
+    picker.open = true;
+    const fib = document.querySelector<HTMLInputElement>("#builtin-auto-fib")!;
+    fib.checked = true; fib.dispatchEvent(new Event("change"));
+    expect(activeTab(page.saved()).localIndicators).toEqual(["auto-fib"]);
+    expect(document.querySelector("#builtin-auto-fib")).toBe(fib);
+    expect(picker.open).toBe(true);
+    click("#addTab");
+    const second = document.querySelector<HTMLInputElement>("#builtin-auto-fib")!;
+    second.checked = false; second.dispatchEvent(new Event("change"));
+    expect(activeWorkspace(page.saved()).tabs[0].localIndicators).toEqual(["auto-fib"]);
+    expect(activeWorkspace(page.saved()).tabs[1].localIndicators).toEqual([]);
+    click(".tab-switch"); click("#widgetEngine");
+    expect(page.instances).toHaveLength(1);
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+    click("#lightweightEngine");
+    expect(document.querySelector<HTMLInputElement>("#builtin-auto-fib")!.checked).toBe(true);
+    expect(document.querySelector<HTMLInputElement>("#studiesInput")!.disabled).toBe(true);
+    expect(activeTab(page.saved()).studies).toContain("MASimple@tv-basicstudies");
+    const restored = await mount(page.saved());
+    expect(activeTab(restored.state()).localIndicators).toEqual(["auto-fib"]);
+  });
+
   it("loads a selected JS file through the host and persists its source", async () => {
     const page = await mount();
     const source = "function calculate() { return []; }";

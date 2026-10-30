@@ -12,7 +12,7 @@ export class ChartCache {
 
   show(workspaceId: string, tab: ChartTab) {
     const id = JSON.stringify([workspaceId, tab.id, tab.engine]);
-    const key = JSON.stringify([tab.symbol, tab.interval, tab.studies, tab.theme, tab.timezone, tab.engine === "lightweight" ? tab.customIndicators : null]);
+    const key = JSON.stringify([tab.symbol, tab.interval, tab.studies, tab.theme, tab.timezone, tab.engine === "lightweight" ? [tab.customIndicators, tab.localIndicators] : null]);
     let entry = this.entries.get(id);
     if (entry && entry.key !== key) { this.remove(id); entry = undefined; }
     for (const value of this.entries.values()) {

@@ -1,5 +1,7 @@
 # 默认指标与持久化边界
 
+0.0.4 增加13项可选本地预设，详见[内建目录与回撤定义](builtin-indicators.md)和[英文公式表](../../indicators.md)。每个指标独立 TS 文件；默认 MA90/ZigZag 不变，用户不需要加载文件即可勾选预设。
+
 每次创建图表必须带 ZigZag（偏差 5%、深度 10）和简单移动平均 MA(90)。
 
 - study ID：ZigZag@tv-basicstudies、MASimple@tv-basicstudies。

@@ -71,6 +71,7 @@
   .stack { @apply flex min-w-0 flex-col gap-1; }
   .stack label { @apply text-[11px] text-tv-muted; }
   .tv-input, .tv-select { @apply min-h-8 w-full rounded-md border border-tv-border bg-tv-surface-2 px-2 py-2 text-tv-text; }
+  .tv-input:disabled { @apply cursor-not-allowed opacity-50; }
   .segmented { @apply inline-flex min-h-8 overflow-hidden rounded-lg border border-tv-border; }
   .segmented button { @apply min-w-14 flex-1 border-0 bg-tv-surface-2 px-2 text-tv-text; }
   .segmented button + button { @apply border-l border-tv-border; }
@@ -79,6 +80,16 @@
   .chart-retry { @apply rounded border border-tv-border px-2 py-0.5 text-tv-text hover:border-tv-accent; }
   .chart-notice { @apply rounded-lg border border-tv-border bg-tv-surface p-2 text-tv-text break-words; }
   .local-tools { @apply flex flex-wrap items-center gap-2; }
+  .builtin-picker { @apply rounded-lg border border-tv-border bg-tv-surface px-2.5 py-1.5; }
+  .builtin-picker[open] { @apply order-first w-full basis-full; }
+  .builtin-picker summary { @apply cursor-pointer text-tv-text; }
+  .builtin-required { @apply my-2 text-[11px] text-tv-muted; }
+  .builtin-options { @apply grid max-h-64 grid-cols-2 gap-1.5 overflow-y-auto min-[900px]:max-h-96 max-[700px]:grid-cols-1; }
+  .builtin-option { @apply flex cursor-pointer items-start gap-2 rounded-md bg-tv-surface-2 p-2; }
+  .builtin-option input { @apply mt-1 shrink-0 accent-tv-accent; }
+  .builtin-option span { @apply flex min-w-0 flex-col gap-0.5; }
+  .builtin-option strong { @apply text-xs font-medium text-tv-text; }
+  .builtin-option small { @apply text-[11px] text-tv-muted; }
   .local-help { @apply text-[11px] text-tv-muted; }
   .indicator-list { @apply inline-flex flex-wrap gap-1; }
   .indicator-chip { @apply inline-flex items-center rounded border border-tv-border px-1.5 text-xs; }
