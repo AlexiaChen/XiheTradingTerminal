@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.0.0] - 2026-10-30
+
+- Show the hosted main chart and Lightweight indicator preview together: side by side on wide windows and stacked in narrow sidebars. Retain cached main-chart instances and legacy workspace data.
+- Follow main-chart symbol and effective interval changes using the Widget's messages, without iframe DOM injection. Keep chart panning, crosshairs and drawings independent.
+- Replace all Binance REST polling, including auxiliary indicator data, with an anonymous read-only Widget feed connection in the extension host. Support Widget-available stocks and other markets, and display the actual source and delay.
+- Reload bounded history on reconnect/resume, isolate stale subscriptions, coalesce live deltas and request selected auxiliary streams from the same resolved market. Honor VS Code/environment HTTP(S) proxies.
+- Preserve missing volume, align intrabars to actual parent opens, and disclose incomplete coverage and unavailable exchange-session HTF presets.
+- Separate preview reconnection from explicit main-chart reload; retain the 43 presets, per-chart guides and JS Worker contract.
+- Refresh README screenshots, add the classified Built-in Indicator Showcase, ship dependency notices, and extend offline and live-browser validation. This does not claim a real VS Code host or remote CI run.
+
 ## [0.0.4] - 2026-10-30
 
 - Add 30 source-derived TypeScript indicator presets alongside the original 13, with matching category directories for Pine references and TS algorithms. Preserve source attribution, license exceptions, and documented implementation differences.

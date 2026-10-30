@@ -9,3 +9,7 @@
 参考 [TradingView resolution 编码](https://www.tradingview.com/charting-library-docs/latest/ui_elements/Resolution/)，但不要把独立图表库的全部能力套用到托管 widget 上。
 
 0.0.3 本地引擎将 360/480 映射 Binance 原生 6h/8h。2026-10-30 ETHUSDT 实际 HTTP 200，相邻开盘差 21,600/28,800 秒。上述日线回退限制和提示仅针对 Widget；本地无需该警告。详见[双引擎](chart-engines.md)。
+
+## 1.0.0覆盖说明
+
+两图同时展示后，预览跟随Widget实际报告周期。Binance REST已移除；0.0.3独立原生6h/8h的历史证据不再代表当前路径。保留Widget回退提示；有效周期未确认时明确显示跟随Settings，确认后显示实际标的/周期。主图选择预览不支持的周期时显示错误，不继续冒充旧周期。

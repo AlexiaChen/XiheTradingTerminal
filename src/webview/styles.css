@@ -45,17 +45,19 @@
 }
 
 @layer components {
-  #app { @apply flex h-screen flex-col gap-2.5 bg-tv-bg p-2.5 max-[700px]:p-2; }
+  #app { @apply flex min-h-screen flex-col gap-2.5 bg-tv-bg p-2.5 max-[700px]:p-2; }
   .terminal-brand { @apply mr-1 text-xs font-semibold tracking-[0.2em] text-tv-accent; }
   .workspace-bar { @apply flex flex-wrap items-center gap-2; }
   .workspace-bar label { @apply text-[10px] tracking-[0.14em] text-tv-muted; }
   .workspace-bar select { @apply min-w-32 max-w-64 flex-1; }
   .workspace-bar button { @apply whitespace-nowrap; }
   .control-bar { @apply flex min-h-9 items-center justify-between gap-2; }
-  .engine-tabs { @apply flex gap-1 rounded-lg border border-tv-border bg-tv-surface p-1; }
-  .engine-tabs button { @apply flex-1 rounded-md px-2 py-1.5 text-tv-muted; }
-  .engine-tabs button[aria-selected="true"] { @apply bg-tv-accent/15 text-tv-accent; }
-  .engine-tabs button:focus-visible { @apply outline outline-tv-accent; }
+  .comparison-heading { @apply flex flex-wrap justify-between gap-1 text-[10px] tracking-wide text-tv-accent; }
+  .comparison-heading > span + span { @apply break-words text-tv-muted; }
+  .comparison-charts { @apply grid min-h-0 flex-1 grid-cols-2 gap-2.5 max-[1000px]:grid-cols-1; }
+  .chart-panel { @apply flex min-w-0 flex-col gap-1.5; }
+  .panel-heading { @apply flex flex-wrap justify-between gap-1 text-[11px] text-tv-accent; }
+  .panel-heading > span { @apply text-tv-muted; }
   .tabs { @apply flex min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5; scrollbar-width: thin; }
   .tab { @apply inline-flex shrink-0 items-center rounded-lg border border-tv-border bg-tv-surface; }
   .tab.active { @apply border-tv-accent bg-tv-accent/15; }
@@ -128,8 +130,8 @@
   .local-canvas #tv-attr-logo[data-dark] { --fill: #ebdbb2; --stroke: #282828; }
   .direction-key { @apply text-tv-accent; }
   .interval-warning { @apply text-[11px] text-amber-600; }
-  .chart-shell { @apply min-h-56 flex-1 overflow-hidden rounded-lg border border-tv-border bg-tv-surface; }
-  #container, .chart-instance { @apply h-full w-full; }
+  .chart-shell { @apply h-[max(28rem,calc(100vh-20rem))] min-h-96 overflow-hidden rounded-lg border border-tv-border bg-tv-surface max-[1000px]:h-[max(26rem,55vh)]; }
+  #container, #previewContainer, .chart-instance { @apply h-full w-full; }
   .rename-overlay { @apply fixed inset-0 z-10 grid place-items-center bg-black/60 p-5; }
   .rename-card { @apply grid w-full max-w-90 gap-3.5 rounded-lg border border-tv-border bg-tv-surface p-5; }
   .rename-actions { @apply flex justify-end gap-2; }

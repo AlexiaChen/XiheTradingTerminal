@@ -93,5 +93,10 @@ const calculations: Record<BuiltinIndicatorId, Calculation> = {
 };
 
 export function calculateBuiltin(id: BuiltinIndicatorId, bars: Candle[], interval: string, context?: IndicatorContext): BuiltinResult {
+  if (context?.marketSession && context.marketSession !== "24x7" && ["htf-po3", "sr-mtf", "nomada-levels"].includes(id)) {
+    return { plots: [], notice: "This preset uses fixed UTC HTF boundaries. Exchange-session alignment is unavailable for this market; the preset is omitted." };
+  }
+  const requiresVolume = ["vwap", "volume", "sr-breaks", "sr-pro", "msb-ob-score", "htf-po3", "institutional-flow", "clusters-vp", "delta-flow", "liquidity-depth", "volumetric-structure", "volume-delta", "volume-nodes", "liquidity-delta"].includes(id);
+  if (requiresVolume && bars.some(bar => !Number.isFinite(bar.volume))) { return { plots: [], notice: "Volume is unavailable from this source; this volume-dependent preset is skipped." }; }
   return calculations[id](bars, interval, context);
 }

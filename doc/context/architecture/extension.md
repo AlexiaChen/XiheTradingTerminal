@@ -14,7 +14,7 @@ src/webview/main.ts → Vite IIFE → out/webview.js
   ├── styles.css → Tailwind Vite 插件 → out/webview.css
   ├── ChartCache: 按工作区/图表/引擎 ID 缓存实例
   ├── widgetLoader.ts → 异步 tv.js → new TradingView.widget
-  └── lightweightChart.ts → Binance K 线 → 本地 Canvas / 指标 Worker
+  └── lightweightChart.ts ↔ previewFeed.ts ↔ Provider / WidgetFeed → 本地 Canvas / 指标 Worker
 ```
 
 视图 ID 为 `xihe-trading-terminal.sidebar`，Activity Bar 容器 ID 为 `xihe-trading-terminal`，重载命令为 `xihe-trading-terminal.reload`。隐藏 Webview 时保留上下文。
@@ -23,4 +23,10 @@ src/webview/main.ts → Vite IIFE → out/webview.js
 
 安全策略默认拒绝所有资源；本地 JS 使用 nonce 和 Webview 资源源，远程脚本仅允许 s3.tradingview.com，样式使用本地构建产物，frame 仅允许 TradingView 域。注入 JSON 转义 `<`，名称通过 textContent 渲染。
 
-本地行情 connect-src 仅允许 data-api.binance.vision，worker-src 仅 blob:，无 unsafe-eval。文件选择要求可信工程并限制大小；源码快照由 Worker 计算。拒绝 iframe 来源的宿主协议消息。隐藏本地图表停止轮询、取消请求和 Worker，返回补取历史。
+1.0.0的Webview行情通过宿主消息获取，connect-src为none、worker-src仅blob:，无unsafe-eval。扩展宿主使用匿名Widget WS连接。文件选择要求可信工程并限制大小，源码快照由Worker计算；拒绝iframe来源的宿主协议消息。隐藏预览取消订阅和Worker，恢复后重载历史。
+
+## 1.0.0 宿主行情
+
+Provider管理一个活跃WidgetFeed，验证请求ID/标的/周期，处理previewSubscribe/Stop，隐藏或释放时关闭。旧回调在feedId变化后不能向新图发送事件。WS传输、代理、心跳、帧和序列解码位于marketData，Webview只接收受控消息；CSP connect-src为none。主图观察通过tv.js消息接口，保持跨域隔离，主图和预览分开缓存。两图的symbol/interval联动，平移、十字线和画线独立。
+
+Widget的quoteUpdate回调在tv.js中跨实例共享；当前实现恢复缓存主图时重新订阅，隐藏实例迟到的ready不抢占回调，并按ticker和交易所分别缓存报价，防止其他隐藏Widget污染实际源。对应离线回归及真实AAPL往返后修改MSFT/1H验证通过。

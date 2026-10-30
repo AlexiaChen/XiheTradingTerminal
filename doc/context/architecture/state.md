@@ -26,3 +26,7 @@ normalizeStudies 始终补充 ZigZag 和 MASimple，并保留合法额外 study 
 0.0.4 的 localIndicators[] 仅控制本地图表预设；无该字段时从旧 Volume/RSI 迁移，显式空数组不回填。未知 ID 过滤、重复项去重、按目录稳定排序。复制 Chart 时克隆数组，互不影响；Widget 的 studies 和缓存保持独立。
 
 旧状态 engine 默认为 widget，customIndicators 为空；引擎选择和 JS 源码快照可恢复，数量和 UTF-8 字节大小受限制。已有 SOLUSDT 标签和显式参数不覆盖，重装同 ID 插件可能恢复 Memento；新建 Workspace 使用 ETH/4H 默认。
+
+## 1.0.0 同时展示兼容
+
+保留旧engine值和全部workspace/chart/指标字段，但界面同时显示widget和lightweight；不再据engine隐藏任一图。Widget内部选择只在会话运行态following映射中记录，不覆盖用户显式保存的Settings；重载仍使用保存配置，不承诺完整Widget布局恢复。

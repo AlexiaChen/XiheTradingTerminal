@@ -7,6 +7,12 @@ import type { TradingViewState } from "../../src/chartState";
 import type { widgetOptions } from "../../src/theme";
 import { BUILTIN_INDICATORS } from "../../src/indicators/catalog";
 
+vi.mock("../../src/marketData/widgetFeed", () => ({ WidgetFeed: class { dispose = vi.fn(); } }));
+const observers = vi.hoisted(() => [] as ((symbol: string, interval: string) => void)[]);
+vi.mock("../../src/webview/widgetObserver", () => ({ observeWidget: (widget: { remove?: () => void }, changed: (symbol: string, interval: string) => void) => {
+  observers.push(changed); return { setVisible: vi.fn(), remove: () => widget.remove?.() };
+} }));
+
 const localCharts = vi.hoisted(() => [] as { remove: ReturnType<typeof vi.fn>; setVisible: ReturnType<typeof vi.fn> }[]);
 vi.mock("../../src/webview/lightweightChart", () => ({
   createLightweightChart: () => {
@@ -16,7 +22,9 @@ vi.mock("../../src/webview/lightweightChart", () => ({
   }
 }));
 
+let detach = () => {};
 async function mount(initial?: unknown, restored?: unknown, missingLibrary = false) {
+  detach();
   vi.resetModules();
   const clone = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));
   let persisted = clone(initial);
@@ -48,7 +56,15 @@ async function mount(initial?: unknown, restored?: unknown, missingLibrary = fal
     setState: (state: TradingViewState) => { local = clone(state); },
     postMessage: (message: unknown) => receive(clone(message))
   }));
+  const windowEvents = vi.spyOn(window, "addEventListener"), documentEvents = vi.spyOn(document, "addEventListener");
   await import("../../src/webview/main");
+  const listeners = windowEvents.mock.calls.slice(), documentListeners = documentEvents.mock.calls.slice();
+  windowEvents.mockRestore(); documentEvents.mockRestore();
+  detach = () => {
+    for (const [type, listener, options] of listeners) { window.removeEventListener(type, listener, options); }
+    for (const [type, listener, options] of documentListeners) { document.removeEventListener(type, listener, options); }
+    provider.dispose();
+  };
   return {
     instances, html: webview.html,
     state: () => clone(local) as TradingViewState,
@@ -68,12 +84,22 @@ function rename(name: string) {
   document.querySelector<HTMLFormElement>("#renameForm")!.dispatchEvent(new Event("submit", { cancelable: true }));
 }
 
-beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localCharts.length = 0; });
+beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localCharts.length = 0; observers.length = 0; });
 
 describe("terminal Webview interactions", () => {
+  it("resets observed context after main recreation and waits for its fresh confirmation", async () => {
+    const page = await mount();
+    observers[0]("BATS_DLY:MSFT", "60");
+    expect(document.querySelector("#followStatus")!.textContent).toContain("Following main: BATS_DLY:MSFT");
+    click('button[data-theme="light"]');
+    expect(page.instances).toHaveLength(2);
+    expect(document.querySelector("#followStatus")!.textContent).toContain("Following settings: BINANCE:ETHUSDT");
+    observers[1]("BINANCE:ETHUSDT", "240");
+    expect(document.querySelector("#followStatus")!.textContent).toContain("Following main: BINANCE:ETHUSDT");
+  });
   it("saves built-in selections per chart and preserves the picker and hosted instance", async () => {
     const page = await mount();
-    click("#lightweightEngine");
+
     const picker = document.querySelector<HTMLElement>("#builtinDropdown")!;
     click("#builtinToggle");
     const fib = document.querySelector<HTMLInputElement>("#builtin-auto-fib")!;
@@ -88,12 +114,12 @@ describe("terminal Webview interactions", () => {
     second.checked = false; second.dispatchEvent(new Event("change"));
     expect(activeWorkspace(page.saved()).tabs[0].localIndicators).toEqual(["auto-fib"]);
     expect(activeWorkspace(page.saved()).tabs[1].localIndicators).toEqual([]);
-    click(".tab-switch"); click("#widgetEngine");
-    expect(page.instances).toHaveLength(1);
+    click(".tab-switch");
+    expect(page.instances).toHaveLength(2);
     expect(page.instances[0].remove).not.toHaveBeenCalled();
-    click("#lightweightEngine");
+
     expect(document.querySelector<HTMLInputElement>("#builtin-auto-fib")!.checked).toBe(true);
-    expect(document.querySelector<HTMLInputElement>("#studiesInput")!.disabled).toBe(true);
+    expect(document.querySelector<HTMLInputElement>("#studiesInput")!.disabled).toBe(false);
     expect(activeTab(page.saved()).studies).toContain("MASimple@tv-basicstudies");
     const restored = await mount(page.saved());
     expect(activeTab(restored.state()).localIndicators).toEqual(["auto-fib"]);
@@ -101,7 +127,7 @@ describe("terminal Webview interactions", () => {
 
   it("searches names and Chinese aliases without clearing hidden selections or rebuilding charts", async () => {
     const page = await mount();
-    click("#lightweightEngine"); click("#builtinToggle");
+     click("#builtinToggle");
     const search = document.querySelector<HTMLInputElement>("#builtinSearch")!;
     const query = (value: string) => { search.value = value; search.dispatchEvent(new Event("input")); };
     query("MaCd");
@@ -124,7 +150,7 @@ describe("terminal Webview interactions", () => {
 
   it("supports dropdown keyboard selection, Escape, and outside dismissal", async () => {
     const page = await mount();
-    click("#lightweightEngine");
+
     const toggle = document.querySelector<HTMLButtonElement>("#builtinToggle")!;
     toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }));
     const search = document.querySelector<HTMLInputElement>("#builtinSearch")!;
@@ -145,7 +171,7 @@ describe("terminal Webview interactions", () => {
   });
 
   it("keeps cross-category overlays selected while category/search changes remain read-only", async () => {
-    const page = await mount(); click("#lightweightEngine"); click("#builtinToggle");
+    const page = await mount();  click("#builtinToggle");
     const category = document.querySelector<HTMLSelectElement>('[aria-label="Indicator category"]')!;
     category.value = "market-structure"; category.dispatchEvent(new Event("change"));
     expect(document.querySelector("#builtin-liquidity-sweeps")!.closest("label")!.hidden).toBe(false);
@@ -161,7 +187,7 @@ describe("terminal Webview interactions", () => {
   });
 
   it("shows a selected indicator guide on focus, closes it with Escape, and removes only that overlay", async () => {
-    const page = await mount(); click("#lightweightEngine"); click("#builtinToggle"); click("#builtin-liquidity-sweeps"); click("#builtin-macd");
+    const page = await mount();  click("#builtinToggle"); click("#builtin-liquidity-sweeps"); click("#builtin-macd");
     const help = document.querySelector<HTMLButtonElement>('[aria-label="Guide: Liquidity Sweeps"]')!;
     const instances = localCharts.length; help.focus();
     const card = document.querySelector<HTMLElement>("#indicatorGuideCard")!;
@@ -202,22 +228,22 @@ describe("terminal Webview interactions", () => {
     expect(activeTab(page.saved()).customIndicators).toEqual([]);
   });
 
-  it("switches engines with tabs, retaining each engine instance and Widget edits", async () => {
+  it("shows both charts and rebuilds only the preview when local selections change", async () => {
     const page = await mount();
-    page.instances[0].customIndicators.push("internal edit");
-    click("#lightweightEngine");
-    expect(activeTab(page.saved()).engine).toBe("lightweight");
+    expect(document.querySelector("#container")!.closest("section")!.hidden).toBe(false);
+    expect(document.querySelector("#previewContainer")!.closest("section")!.hidden).toBe(false);
+    expect(document.querySelector("#widgetEngine")).toBeNull();
     expect(localCharts).toHaveLength(1);
-    change("#intervalSelect", "360");
-    expect(document.querySelector<HTMLElement>("#intervalWarning")!.hidden).toBe(true);
-    change("#intervalSelect", "240");
-    click("#widgetEngine");
+    page.instances[0].customIndicators.push("internal edit");
+    click("#builtinToggle"); click("#builtin-macd");
+    expect(localCharts).toHaveLength(2);
     expect(page.instances).toHaveLength(1);
     expect(page.instances[0].customIndicators).toEqual(["internal edit"]);
-    expect(page.instances[0].remove).not.toHaveBeenCalled();
-    expect(document.querySelector("#widgetEngine")!.getAttribute("aria-selected")).toBe("true");
-    click("#lightweightEngine");
+    click("#retryChart");
     expect(localCharts).toHaveLength(3);
+    expect(page.instances[0].remove).not.toHaveBeenCalled();
+    change("#intervalSelect", "360");
+    expect(document.querySelector<HTMLElement>("#intervalWarning")!.hidden).toBe(false);
   });
 
   it("keeps old SOL configuration and uses ETH / 4H only in a new workspace", async () => {
@@ -227,32 +253,32 @@ describe("terminal Webview interactions", () => {
     expect(activeTab(page.state())).toMatchObject({ symbol: "BINANCE:ETHUSDT", interval: "240" });
   });
 
-  it("shows library failures in a visible notice and can switch to the local engine", async () => {
+  it("shows main library failures while keeping the independent preview available", async () => {
     await mount(undefined, undefined, true);
     await vi.waitFor(() => expect(document.querySelector("#chartNotice")!.textContent).toContain("Could not load TradingView"));
     expect(document.querySelector<HTMLElement>("#chartNotice")!.hidden).toBe(false);
-    click("#lightweightEngine");
+
     expect(localCharts).toHaveLength(1);
-    expect(document.querySelector<HTMLElement>("#chartNotice")!.hidden).toBe(true);
+    expect(document.querySelector<HTMLElement>("#chartNotice")!.hidden).toBe(false);
   });
 
-  it("retries only the active engine while keeping the other chart alive", async () => {
+  it("explicitly reloads the main chart without rebuilding the preview", async () => {
     const page = await mount();
     click("#addTab");
-    click("#retryChart");
+    click("#reloadWidget");
     expect(page.instances).toHaveLength(3);
     expect(page.instances[1].remove).toHaveBeenCalledOnce();
     expect(page.instances[0].remove).not.toHaveBeenCalled();
   });
 
-  it("persists loaded JS source for the target chart and retains it across engine switches", async () => {
+  it("persists loaded JS source for the target chart without rebuilding the main chart", async () => {
     const page = await mount();
     const workspace = activeWorkspace(page.state());
     const tab = activeTab(page.state());
     window.dispatchEvent(new MessageEvent("message", { data: { type: "indicatorLoaded", workspaceId: workspace.id, tabId: tab.id, name: "EMA 20.js", source: "function calculate(bars) { return []; }" } }));
     expect(activeTab(page.saved()).customIndicators[0].name).toBe("EMA 20.js");
     expect(page.instances).toHaveLength(1);
-    click("#lightweightEngine"); click("#widgetEngine");
+
     expect(activeTab(page.saved()).customIndicators).toHaveLength(1);
   });
 

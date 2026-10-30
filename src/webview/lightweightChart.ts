@@ -1,14 +1,16 @@
 import { CandlestickSeries, ColorType, createChart, HistogramSeries, LineSeries, type ISeriesApi, type UTCTimestamp } from "lightweight-charts";
 import type { ChartTab } from "../chartState";
-import { fetchCandles, INTERVALS, mergeCandles, type Candle } from "../marketData";
+import { INTERVALS, mergeCandles, type Candle } from "../marketData";
 import { sma, zigzag, type IndicatorPoint } from "../indicators";
 
 import { BuiltinRenderer } from "./builtinRenderer";
 import { GRUVBOX_PALETTE } from "../theme";
 import { runIndicator } from "./indicatorRunner";
-import { IndicatorData } from "../marketData/indicatorData";
+import { indicatorDataRequirements } from "../marketData/indicatorData";
+import { subscribePreview } from "./previewFeed";
+import type { FeedEvent, SymbolInfo } from "../marketData/widgetProtocol";
 
-export function createLightweightChart(tab: ChartTab, containerId: string, trusted: boolean) {
+export function createLightweightChart(tab: ChartTab, containerId: string, trusted: boolean, send: (message: unknown) => void) {
   const container = document.getElementById(containerId)!;
   container.classList.add("local-chart");
   const legend = document.createElement("div");
@@ -26,7 +28,6 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
   container.append(legend, status, canvas);
   const dashboards = document.createElement("div"); dashboards.className = "local-dashboards";
   container.insertBefore(dashboards, canvas);
-  const indicatorData = new IndicatorData();
   const notes = document.createElement("details"); notes.className = "local-notices"; notes.hidden = true;
   const notesSummary = document.createElement("summary"), notesBody = document.createElement("div");
   notes.append(notesSummary, notesBody); container.insertBefore(notes, canvas);
@@ -49,45 +50,42 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
   const custom = new Map<string, ISeriesApi<"Line" | "Histogram">>();
   const customPanes = new Map<string, number>();
   let bars: Candle[] = [];
-  let needsHistory = true;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let auxiliary = new Map<string, Candle[]>();
+  let info: SymbolInfo | undefined;
+  let first = true, pending = false, rendering = false;
+  let stopFeed: (() => void) | undefined;
+  let renderTimer: ReturnType<typeof setTimeout> | undefined;
   let request: AbortController | undefined;
   let visible = true;
   let disposed = false;
+  let connectionMessage = "Connecting to the hosted Widget feed…";
 
   const data = (points: IndicatorPoint[]) => points.map(point => ({ ...point, time: point.time as UTCTimestamp }));
 
   async function refresh() {
-    if (disposed || !visible || document.hidden) { return; }
-    const controller = new AbortController();
-    request?.abort();
-    request = controller;
-    if (!bars.length) { status.textContent = "Loading Binance spot candles…"; }
+    if (disposed || !visible || document.hidden || !bars.length || !info) { return; }
+    if (rendering) { pending = true; return; }
+    rendering = true; pending = false;
+    const controller = new AbortController(); request = controller;
+    // Keep this render coherent even if a new stream snapshot arrives while a Worker is running.
+    const snapshot = bars, source = info, context = new Map(auxiliary);
     try {
-      const incoming = await fetchCandles(tab.symbol, tab.interval, controller.signal, needsHistory || !bars.length ? 1000 : 2);
-      if (controller.signal.aborted || disposed) { return; }
-      const first = !bars.length;
-      needsHistory = false;
-      bars = mergeCandles(bars, incoming);
       const close = bars.at(-1)!.close;
-      const precision = close >= 100 ? 2 : close >= 1 ? 4 : 8;
-      const priceFormat = { type: "price" as const, precision, minMove: 10 ** -precision };
+      const tick = source.minTick > 0 ? source.minTick : close >= 100 ? 0.01 : 0.0001;
+      const precision = Math.min(10, Math.max(0, String(tick).includes("e-") ? Number(String(tick).split("e-")[1]) : (String(tick).split(".")[1]?.length ?? 0)));
+      const priceFormat = { type: "price" as const, precision, minMove: tick };
       candles.applyOptions({ priceFormat });
       average.applyOptions({ priceFormat });
       pivots.applyOptions({ priceFormat });
-      candles.setData(bars.map(bar => ({ ...bar, time: bar.time as UTCTimestamp })));
-      average.setData(data(sma(bars)));
-      pivots.setData(data(zigzag(bars)));
-      if (first) { chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, bars.length - 180), to: bars.length + (tab.localIndicators.some(id => ["htf-po3", "htf-reversal", "clusters-vp", "delta-flow", "liquidity-depth", "volume-nodes", "volumetric-structure"].includes(id)) ? 115 : 5) }); }
-      const warnings = unsupported.length ? [`Widget-only indicators retained: ${unsupported.join(", ")}`] : [];
-      let context;
-      try { context = await indicatorData.load(tab.symbol, tab.interval, tab.localIndicators, bars, controller.signal); }
-      catch (error) {
-        if (controller.signal.aborted || disposed) { return; }
-        warnings.push(`Auxiliary data: ${error instanceof Error ? error.message : String(error)}`);
-      }
-      if (controller.signal.aborted || disposed) { return; }
-      const rendered = builtins.update(bars, tab.interval, priceFormat, { series: context?.series ?? new Map(), theme: tab.theme });
+      candles.setData(snapshot.map(bar => ({ ...bar, time: bar.time as UTCTimestamp })));
+      average.setData(data(sma(snapshot)));
+      pivots.setData(data(zigzag(snapshot)));
+      if (first) { first = false; chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, bars.length - 180), to: bars.length + (tab.localIndicators.some(id => ["htf-po3", "htf-reversal", "clusters-vp", "delta-flow", "liquidity-depth", "volume-nodes", "volumetric-structure"].includes(id)) ? 115 : 5) }); }
+      const warnings = unsupported.length ? [`Main-chart-only indicators retained: ${unsupported.join(", ")}`] : [];
+      const missing = indicatorDataRequirements(tab.localIndicators, tab.interval).filter(tf => !context.has(tf));
+      if (missing.length) { warnings.push(`Awaiting auxiliary Widget data: ${missing.join(", ")}. Missing coverage is not replaced with main bars.`); }
+      if (!source.volumeAvailable) { warnings.push("This Widget source has no complete volume. Volume presets are skipped; custom JS receives NaN for missing volume."); }
+      const rendered = builtins.update(snapshot, tab.interval, priceFormat, { series: context, theme: tab.theme, minTick: source.minTick, marketSession: source.session });
       warnings.push(...rendered.warnings);
       const names = rendered.names;
       const expanded = new Set([...dashboards.querySelectorAll("details[open] summary")].map(node => node.textContent));
@@ -100,7 +98,7 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
       for (const indicator of tab.customIndicators) {
         if (!trusted) { warnings.push("Trust this VS Code workspace to run saved JS indicators."); break; }
         try {
-          const plots = await runIndicator(indicator.source, bars, controller.signal);
+          const plots = await runIndicator(indicator.source, snapshot, controller.signal);
           if (controller.signal.aborted || disposed) { return; }
           const used = new Set<string>();
           for (const [index, plot] of plots.entries()) {
@@ -128,36 +126,67 @@ export function createLightweightChart(tab: ChartTab, containerId: string, trust
       labels.textContent = ["MA 90", "ZigZag 5%, 10", ...names].join(" · ");
       notes.hidden = !warnings.length; notesSummary.textContent = `Indicator notes (${warnings.length}) · data coverage and preset limits`;
       notesBody.replaceChildren(...warnings.map(message => { const paragraph = document.createElement("p"); paragraph.textContent = message; return paragraph; }));
-      status.textContent = [`Binance spot · ${bars.length} bars · refresh 15s · ${new Date().toISOString().slice(11, 19)} UTC`, ...(warnings.length === 1 ? warnings : [])].join(" | ");
+      updateStatus();
     } catch (error) {
       if (!controller.signal.aborted && !disposed) {
-        needsHistory = true;
-        status.textContent = `${bars.length ? "Showing last received candles. " : ""}${error instanceof Error ? error.message : String(error)} Retry Chart to reconnect.`;
+        status.textContent = `Indicator preview: ${error instanceof Error ? error.message : String(error)}`;
       }
     } finally {
-      if (!disposed && visible && !document.hidden && request === controller) { timer = setTimeout(() => { void refresh(); }, 15_000); }
+      rendering = false;
+      if (pending && !disposed && visible && !document.hidden) { scheduleRender(); }
     }
   }
 
-  function stop() { clearTimeout(timer); request?.abort(); }
-  function onVisibility() { stop(); needsHistory = true; if (!document.hidden && visible) { void refresh(); } }
+  function updateStatus() {
+    const source = info;
+    title.textContent = source ? `${source.symbol} · ${INTERVALS[source.interval] ?? source.interval} · UTC display` : `${tab.symbol} · ${tab.interval}`;
+    const delayed = source?.status.match(/delayed_streaming_(\d+)/);
+    const timing = delayed ? `delayed ${Number(delayed[1]) / 60} min` : source?.status === "streaming" ? "streaming" : source?.status ?? "connecting";
+    status.textContent = [connectionMessage, ...(source ? [`Widget feed · ${source.exchange} · ${timing} · ${bars.length} bars`, `Source timezone ${source.timezone} · session ${source.session}`, source.requestedSymbol !== source.symbol ? `Requested ${source.requestedSymbol} → ${source.symbol}` : ""] : [])].filter(Boolean).join(" | ");
+  }
+  function scheduleRender() {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => { void refresh(); }, 100);
+  }
+  function receive(event: FeedEvent) {
+    if (disposed || !visible) { return; }
+    if (event.kind === "status") {
+      if (event.state === "connecting" || event.state === "reconnecting") { auxiliary.clear(); }
+      connectionMessage = `${bars.length ? "Showing last received candles. " : ""}${event.message}`;
+      updateStatus(); if (bars.length) { scheduleRender(); } return;
+    }
+    const incoming = event.bars.map(bar => ({ ...bar, volume: bar.volume === null ? NaN : bar.volume }));
+    if (event.resolution === "main") {
+      if (info && info.symbol !== event.info.symbol) { auxiliary = new Map(); first = true; }
+      info = event.info;
+      bars = event.reset ? incoming : mergeCandles(bars, incoming);
+      connectionMessage = `Updated ${new Date().toISOString().slice(11, 19)} UTC`;
+    } else {
+      // Source identity is checked in the host too. Never mix auxiliary markets.
+      if (info && event.info.symbol !== info.symbol) { return; }
+      auxiliary.set(event.resolution, event.reset ? incoming : mergeCandles(auxiliary.get(event.resolution) ?? [], incoming, 12_000));
+    }
+    updateStatus(); scheduleRender();
+  }
+  function start() {
+    if (disposed || !visible || document.hidden || stopFeed) { return; }
+    auxiliary.clear();
+    stopFeed = subscribePreview({ symbol: tab.symbol, interval: tab.interval, auxiliary: indicatorDataRequirements(tab.localIndicators, tab.interval) }, send, receive);
+  }
+  function stop() { clearTimeout(renderTimer); request?.abort(); stopFeed?.(); stopFeed = undefined; }
+  function onVisibility() { stop(); if (!document.hidden && visible) { start(); } }
   document.addEventListener("visibilitychange", onVisibility);
-  void refresh();
+  start();
   return {
     setVisible(next: boolean) {
       if (next === visible || disposed) { return; }
-      visible = next;
-      stop();
-      needsHistory = true;
-      if (visible) { void refresh(); }
+      visible = next; stop();
+      if (visible) { start(); }
     },
     remove() {
-      disposed = true;
-      stop();
+      disposed = true; stop();
       document.removeEventListener("visibilitychange", onVisibility);
-      builtins.remove();
-      indicatorData.clear();
-      chart.remove();
+      builtins.remove(); chart.remove();
     }
   };
 }

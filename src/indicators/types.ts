@@ -18,8 +18,9 @@ export type IndicatorDrawing = DrawingStyle & (
 export type IndicatorTable = { title: string; rows: [string, string][] };
 export type BuiltinResult = { plots: BuiltinPlot[]; drawings?: IndicatorDrawing[]; tables?: IndicatorTable[]; notice?: string };
 export type IndicatorContext = {
-  /** Extra closed/forming bars keyed by Binance interval (e.g. 4h/1d/1w/1m). */
+  /** Extra closed/forming bars keyed by source resolution (e.g. 4h/1d/1w/1m). */
   series: ReadonlyMap<string, import("../marketData").Candle[]>;
   minTick?: number;
   theme?: "dark" | "light";
+  marketSession?: string;
 };

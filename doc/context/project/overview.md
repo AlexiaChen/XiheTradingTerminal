@@ -4,7 +4,7 @@ XiheTradingTerminal 是 VS Code 中的图表工作台。每个 VS Code 工程保
 
 当前支持工作区创建/重命名/切换/删除、Chart 添加/重命名/切换/关闭、symbol/interval/额外指标/明暗主题配置与设置栏折叠。默认 symbol 为 BINANCE:ETHUSDT、4H、UTC、Gruvbox Dark，Settings 默认折叠，指标为 ZigZag(5%, 10) 和简单 MA(90)。
 
-双引擎通过独立 Tab 切换：tv.js 创建托管 Widget，由 TradingView 提供行情；官方开源 Lightweight Charts 5.2.1 本地渲染 Binance 公开现货 K 线，支持 JS Worker 指标。默认仍为 Widget。没有 Pine 执行器或下单。Widget 6h/8h 仍可能回退日线，本地可用原生 6h/8h；详见[双引擎](../features/chart-engines.md)。
+1.0.0同时显示托管Widget主图和官方Lightweight Charts 5.2.1指标预览；宽屏并排，窄栏上下。扩展宿主匿名订阅Widget同一行情服务，支持服务允许的美股等市场和crypto，显示实际源/延迟；已删除Binance REST。预览跟随主图消息报告的实际标的/周期，保留JS Worker和43项可选预设。没有Pine执行器或下单，未引入Advanced Charts库。Widget 6h/8h若回退，预览跟随有效周期；详见[双图架构](../features/chart-engines.md)和[单指标展示](../../built-in-indicator-showcase.md)。
 
 技术栈为 Vite 8、Tailwind CSS 4、TypeScript 6、Vitest 5、ESLint 10；本地 vsce 负责 VSIX 打包。用户介绍与截图见 [README](../../../README.md)，开发入口见 [package.json](../../../package.json)。
 

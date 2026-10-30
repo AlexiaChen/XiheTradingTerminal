@@ -1,5 +1,27 @@
 # 当前进度
 
+## 2026-10-30：1.0.0 主图与指标预览同时展示
+
+用户明确要求从调研推进到完整插件、持续同步、删除Binance API、升级1.0.0，并要求README少量典型图、独立Built-in Indicator Showcase。托管主图和Lightweight预览现宽屏并排、窄栏上下；主图内部标的/实际周期通过消息跟随，保留缓存实例与旧工作区。原engine字段保留兼容但不切换显示。
+
+扩展宿主原生匿名订阅Widget同一行情服务，无额外浏览器/密钥/cookie；主流1000根、辅助每流最多12000根，明确实际源、时区/时段和延迟。心跳/拆帧/索引修订、增量合并、断线退避重载、隐藏取消和恢复、旧ID隔离均已实现。代码/前端CSP中的Binance REST路径移除，代理跟随宿主环境。数据来源是独立连接，未宣称iframe数据API或十字线/平移/画线联动。
+
+ETH连续更新、Widget内部改1H/改MSFT后保持iframe并自动跟随、美股BATS_DLY源与15分钟延迟、同源辅助5m及主动断线重载已真实验证。子周期按实际父K线起点对齐；缺失量/子周期不制造；固定UTC高周期预设在非24x7时省略并说明。
+
+真实验证还覆盖AAPL往返缓存后修改MSFT/1H时保留iframe；主图报价按ticker/venue隔离，恢复时重新接管tv.js共享回调，隐藏实例迟到ready不抢占。
+
+截图遵循用户最终要求：30个Pine衍生预设各自一张，只保留强制MA90/ZigZag；传统指标可组合。产品仍支持43项多选叠加。英文README展示典型分类并链接[独立展示页](../../built-in-indicator-showcase.md)。重建主图时清除旧的内部标的/周期观察，加载中明确回到Settings直到新实例确认。离线验证已通过lint、类型检查、双Vite构建和14文件212项回归；所有截图/实时验证均为当前构建+VS Code API替身，未下载/启动真实VS Code宿主，不推送/发布。
+
+交付验证：最终 `npm test` 通过lint、类型检查、双Vite构建和14文件212项回归；130条本地文档链接和diff检查通过。35张分类展示图覆盖30个Pine单项及13个传统预设，6张README/界面图来自同一最终构建；全部PNG字节和指南/许可已在VSIX核对。1.0.0包共62文件，约7.96MB，不含源码、Pine参考、依赖目录、测试或context；无Node browser-external替身，无旧Binance传输。截图与真实网络实验均为VS Code API预览替身，未执行真实宿主/远程CI，不提交/推送/发布。
+
+## 2026-10-30：托管 Widget 行情桥接调研（未接入产品）
+
+按用户要求使用agent-browser研究从托管View取得数据。当前`67423e0`重新构建的Webview + VS Code API替身中，父页面跨域读取失败；`tv.js`没有Advanced Charts的`activeChart/exportData`。包装层symbolInfo/quoteUpdate确能返回元信息和最新报价，但没有历史OHLCV。
+
+通过浏览器CDP只读观察正常Widget连接，实得ETH/4H与AAPL/日线各300根OHLCV，观察到ETH最后一根增量。请求`NASDAQ:AAPL`实际解析为`BATS_DLY:AAPL`（Cboe One），不能宣称NASDAQ完整实时源。AAPL快照送入临时Lightweight页，复用项目MA90/ZigZag、RSI/Evasive SuperTrend适配层和JS Worker EMA20，渲染成功，无warnings/页面错误。
+
+此为浏览器捕获与快照回放PoC，没有正式连续桥接、多周期/重连覆盖或真实扩展宿主验证。正式功能仍仅从Binance取本地行情；脚本、数据及截图只在`/tmp`。只更新调研文档，不改产品代码、README功能声明或CHANGELOG。证据、官方接口区别、潜在架构及数据授权边界见[调研记录](../research/widget-data-bridge.md)。
+
 ## 2026-10-30：分类 Pine 衍生预设、绘图适配及叠加指南
 
 用户授权尽可能移植全部30份参考，随后要求 Pine/TS 对齐分类、分类下拉、多选叠加、关键点与悬浮指南，测试、README/Context/截图同步并本地 commit。30份参考已按7类移动，字节与整理前 `26678e9` 完全一致；每份有独立 TS 入口，加上原13项共43项可选预设，UI八类别（包含原震荡指标分类）。稳定ID、默认ETH/4H、折叠Settings、MA90/ZigZag和已有状态保持。

@@ -34,7 +34,7 @@ flowchart LR
 
 - `catalog.ts` 定义八分类与合法 ID；`pineCatalog.ts` 是30项来源、参数和结合作者注释/代码编写的指南元数据；`guides.ts` 合并旧预设指南。
 - `types.ts` 定义 line/histogram 和 segment/box/label/path/fill。算法只有 OHLCV、interval 和只读辅助数据，不接触 chart/DOM/Canvas。
-- `BuiltinRenderer` 负责各项 series、pane 和 primitive 的生命周期，轮询复用，销毁显式 detach，异常清空该项旧图形；用户 JS 的副图与内建副图独立分配。
+- `BuiltinRenderer` 负责各项 series、pane 和 primitive 的生命周期，流式更新复用，销毁显式 detach，异常清空该项旧图形；用户 JS 的副图与内建副图独立分配。
 - `IndicatorPrimitive` 使用公开 Canvas 渲染目标、价格/逻辑坐标转换，缩放/滚动时重新定位，支持右侧投影而不伪造未来行情。每项最多保留1500个最新绘图对象，达到上限有说明。
 - 固定编译的内建公式目前在前端计算，并不继承外部 JS Worker 的2秒超时。用户文件仍走原有可信工程选择、源码快照、Worker和最多8个line/histogram的验证协议；未开放 DOM/图表能力。
 - 不 fork/vendor 上游。已核对安装的5.2.1类型中公开 `attachPrimitive`、`detachPrimitive`、`addCustomSeries` 和坐标接口；现有输出协议的不足由本项目适配层解决。只有出现可复现且公开插件 API 无法完成的具体需求，才另评估窄范围上游修改。
@@ -47,7 +47,7 @@ flowchart LR
 
 ## 数据与准确性边界
 
-主图仍为 Binance 现货、UTC、最近1000根、15秒轮询。`IndicatorData` 按选中指标请求4h/1d/1w或1m/5m/15m/1h数据，分页、去重、增量和取消；每流最多12000条，长时间隐藏后从最新预算窗口恢复。连续子周期组不足时不填0、不用主周期代替。
+1.0.0预览由扩展宿主匿名订阅Widget行情服务，主序列请求1000根；`indicatorDataRequirements`按选中指标声明4h/1d/1w或1m/5m/15m/1h辅助流，使用主序列的实际解析标的，每流最多12000根，服务可返回更少。断线和隐藏恢复重载历史；连续子周期不足不填0、不用主周期代替。美股等非24x7源的固定UTC高周期预设暂省略，展示UTC且保留源时区/时段。
 
 - Volume Delta 只显示有覆盖的父K线，表中报告数量；tick模式不可由15秒快照恢复。
 - Volume Nodes 需所选窗口完整覆盖，否则省略并提示，避免使用截断分布冒充完整结果。

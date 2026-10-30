@@ -6,6 +6,7 @@ import { createWidgetLoader } from "./widgetLoader";
 import { createLightweightChart } from "./lightweightChart";
 import { IndicatorPicker } from "./indicatorPicker";
 import { IndicatorGuides } from "./indicatorGuides";
+import { observeWidget, type HostedWidget } from "./widgetObserver";
 import "./styles.css";
 
 declare function acquireVsCodeApi(): {
@@ -15,7 +16,7 @@ declare function acquireVsCodeApi(): {
 }
 declare global {
   interface Window {
-    TradingView?: { widget: new (options: ReturnType<typeof widgetOptions>) => { remove?: () => void } };
+    TradingView?: { widget: new (options: ReturnType<typeof widgetOptions>) => HostedWidget };
   }
 }
 
@@ -46,11 +47,20 @@ const indicatorGuides = new IndicatorGuides(element("builtinSelected"), id => {
   activeTab(state).localIndicators = activeTab(state).localIndicators.filter(value => value !== id);
   persist(); render();
 });
+const following = new Map<string, { symbol: string; interval: string }>();
+const scopeKey = () => JSON.stringify([activeWorkspace(state).id, activeTab(state).id]);
 const cache = new ChartCache(element("container"), (tab, id) => {
-  if (tab.engine === "lightweight") { return createLightweightChart(tab, id, runtime.trusted === true); }
   if (!window.TradingView?.widget) { throw new Error("TradingView could not load. Check your network and reload the sidebar."); }
-  return new window.TradingView.widget(widgetOptions(tab, id));
+  const scope = scopeKey();
+  // A recreated main chart starts from saved Settings, not its previous internal selection.
+  following.delete(scope);
+  const widget = new window.TradingView.widget(widgetOptions(tab, id));
+  return observeWidget(widget, (symbol, interval) => {
+    following.set(scope, { symbol, interval });
+    if (scope === scopeKey()) { showPreview(); }
+  });
 });
+const previewCache = new ChartCache(element("previewContainer"), (tab, id) => createLightweightChart(tab, id, runtime.trusted === true, message => vscode.postMessage(message)));
 const loadWidget = createWidgetLoader(document, () => Boolean(window.TradingView?.widget), element<HTMLScriptElement>("initialState").nonce);
 let chartRequest = 0;
 
@@ -65,17 +75,29 @@ function showChart(retry = false) {
     if (request !== chartRequest) { return; }
     const workspace = activeWorkspace(state);
     try {
-      if (retry) { cache.retry(workspace.id, activeTab(state)); }
-      else { cache.show(workspace.id, activeTab(state)); }
+      const tab = { ...activeTab(state), engine: "widget" as const };
+      if (retry) { following.delete(scopeKey()); cache.retry(workspace.id, tab); }
+      else { cache.show(workspace.id, tab); }
       chartNotice("");
+      showPreview();
     } catch (error) { chartNotice(error instanceof Error ? error.message : String(error)); }
   };
   // Cached charts switch synchronously and retain their internal indicator edits.
-  if (activeTab(state).engine === "lightweight" || window.TradingView?.widget) { show(); return; }
+  if (window.TradingView?.widget) { show(); return; }
   chartNotice("Connecting to TradingView…");
   void loadWidget().then(show, error => {
     if (request === chartRequest) { chartNotice(error instanceof Error ? error.message : String(error)); }
   });
+}
+
+function showPreview(retry = false) {
+  const workspace = activeWorkspace(state), tab = activeTab(state), observed = following.get(scopeKey());
+  const preview = { ...tab, ...observed, engine: "lightweight" as const };
+  element("followStatus").textContent = observed ? `Following main: ${observed.symbol} · ${observed.interval}` : `Following settings: ${tab.symbol} · ${tab.interval} (main chart not confirmed yet)`;
+  try {
+    if (retry) { previewCache.retry(workspace.id, preview); }
+    else { previewCache.show(workspace.id, preview); }
+  } catch (error) { chartNotice(error instanceof Error ? error.message : String(error)); }
 }
 
 function persist() {
@@ -136,8 +158,8 @@ function render() {
   symbolInput.value = tab.symbol;
   intervalSelect.value = tab.interval;
   studiesInput.value = tab.studies.filter(study => !REQUIRED_STUDIES.includes(study)).join(", ");
-  studiesInput.disabled = tab.engine === "lightweight";
-  element("studiesLabel").textContent = tab.engine === "lightweight" ? "Widget indicators (switch to Widget to edit)" : "Additional indicators (comma list)";
+  studiesInput.disabled = false;
+  element("studiesLabel").textContent = "Main chart indicators (comma list)";
   for (const node of element("themeToggle").querySelectorAll<HTMLButtonElement>("button")) {
     node.classList.toggle("active", node.dataset.theme === tab.theme);
   }
@@ -146,13 +168,7 @@ function render() {
   const toggle = element("toggleSettings");
   toggle.textContent = state.ui.isToolbarCollapsed ? "Show Settings" : "Hide Settings";
   toggle.setAttribute("aria-expanded", String(!state.ui.isToolbarCollapsed));
-  element("intervalWarning").hidden = tab.engine !== "widget" || !["360", "480"].includes(tab.interval);
-  for (const engine of ["widget", "lightweight"] as const) {
-    element(`${engine}Engine`).setAttribute("aria-selected", String(tab.engine === engine));
-    element(`${engine}Engine`).tabIndex = tab.engine === engine ? 0 : -1;
-  }
-  element("localTools").hidden = tab.engine !== "lightweight";
-  element("container").setAttribute("aria-labelledby", `${tab.engine}Engine`);
+  element("intervalWarning").hidden = !["360", "480"].includes(tab.interval);
   element("customIndicators").replaceChildren(...tab.customIndicators.map(indicator => {
     const chip = document.createElement("span");
     chip.className = "indicator-chip";
@@ -167,10 +183,12 @@ function render() {
     return chip;
   }));
   element<HTMLButtonElement>("loadIndicator").disabled = tab.customIndicators.length >= MAX_INDICATORS;
-  indicatorPicker.sync(tab.localIndicators, JSON.stringify([workspace.id, tab.id, tab.engine]));
-  indicatorGuides.sync(tab.engine === "lightweight" ? tab.localIndicators : [], JSON.stringify([workspace.id, tab.id, tab.engine]));
-  cache.retain(new Set(state.workspaces.flatMap(item => item.tabs.flatMap(chart => ["widget", "lightweight"].map(engine => JSON.stringify([item.id, chart.id, engine]))))));
+  indicatorPicker.sync(tab.localIndicators, JSON.stringify([workspace.id, tab.id]));
+  indicatorGuides.sync(tab.localIndicators, JSON.stringify([workspace.id, tab.id]));
+  const ids = new Set(state.workspaces.flatMap(item => item.tabs.flatMap(chart => ["widget", "lightweight"].map(engine => JSON.stringify([item.id, chart.id, engine])))));
+  cache.retain(ids); previewCache.retain(ids);
   showChart();
+  showPreview();
 }
 
 function openRename(kind: "workspace" | "chart", tabId?: string) {
@@ -256,23 +274,13 @@ element("addTab").addEventListener("click", () => {
   persist(); render();
 });
 element("toggleSettings").addEventListener("click", () => { state.ui.isToolbarCollapsed = !state.ui.isToolbarCollapsed; persist(); render(); });
-element("retryChart").addEventListener("click", () => showChart(true));
-for (const engine of ["widget", "lightweight"] as const) {
-  const node = element(`${engine}Engine`);
-  node.addEventListener("click", () => { activeTab(state).engine = engine; persist(); render(); });
-  node.addEventListener("keydown", event => {
-    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
-      event.preventDefault();
-      const next = event.key === "Home" ? "widget" : event.key === "End" ? "lightweight" : engine === "widget" ? "lightweight" : "widget";
-      element(`${next}Engine`).click(); element(`${next}Engine`).focus();
-    }
-  });
-}
+element("retryChart").addEventListener("click", () => showPreview(true));
+element("reloadWidget").addEventListener("click", () => showChart(true));
 element("loadIndicator").addEventListener("click", () => {
   vscode.postMessage({ type: "loadIndicator", workspaceId: activeWorkspace(state).id, tabId: activeTab(state).id });
 });
-symbolInput.addEventListener("change", () => { activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || DEFAULT_SYMBOL; persist(); render(); });
-intervalSelect.addEventListener("change", () => { activeTab(state).interval = intervalSelect.value; persist(); render(); });
+symbolInput.addEventListener("change", () => { following.delete(scopeKey()); activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || DEFAULT_SYMBOL; persist(); render(); });
+intervalSelect.addEventListener("change", () => { following.delete(scopeKey()); activeTab(state).interval = intervalSelect.value; persist(); render(); });
 studiesInput.addEventListener("change", () => { activeTab(state).studies = normalizeStudies(studiesInput.value.split(",")); persist(); render(); });
 for (const node of element("themeToggle").querySelectorAll<HTMLButtonElement>("button")) {
   node.addEventListener("click", () => { activeTab(state).theme = node.dataset.theme === "light" ? "light" : "dark"; persist(); render(); });

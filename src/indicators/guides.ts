@@ -10,7 +10,7 @@ const basics: Partial<Record<BuiltinIndicatorId, [string, string, string]>> = {
   keltner: ["EMA20 with Wilder ATR10 bands ×2.", "Read channel slope and width alongside price structure.", "ATR reflects past range; the channel is not a forecast interval."],
   supertrend: ["ATR10 ×3 trailing trend bands.", "Watch close crossing the active trailing band and the resulting band direction.", "Current-bar flips can disappear before close; stop-like lines are not orders."],
   vwap: ["Volume-weighted HLC3 reset at UTC midnight.", "Compare intraday price with the session volume-weighted mean.", "Incomplete first loaded sessions are omitted; daily/weekly charts are unsupported."],
-  volume: ["Binance base-asset candle volume.", "Compare activity with nearby candles and price movement.", "Candle direction colors do not identify the actual aggressor side of trades."],
+  volume: ["Candle volume in the units supplied by the actual market source.", "Compare activity with nearby candles and price movement.", "Candle direction colors do not identify the actual aggressor side of trades."],
   rsi: ["Wilder RSI14 measures relative gains and losses.", "Read momentum around 50 and extreme regions in the context of the prevailing trend.", "Overbought/oversold readings are not automatic sell/buy signals."],
   macd: ["EMA12−EMA26, with EMA9 signal and difference histogram.", "Compare line crossovers with the sign and change of the histogram.", "Momentum can weaken before price reverses; signals lag and may whipsaw."],
   stochastic: ["Smoothed close location in the last 14-bar range (%K/%D 3/3).", "Compare K/D turns with the current range or trend.", "Values can remain extreme during a strong trend."],

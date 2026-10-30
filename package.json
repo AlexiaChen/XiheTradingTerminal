@@ -2,7 +2,7 @@
   "name": "xihe-trading-terminal",
   "displayName": "XiheTradingTerminal",
   "description": "A Gruvbox chart terminal with TradingView and Lightweight Charts, named workspaces, and local JavaScript indicators.",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "publisher": "AlexiaChen",
   "repository": "https://github.com/AlexiaChen/XiheTradingTerminal.git",
   "engines": {
@@ -77,6 +77,7 @@
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "22.20.5",
     "@types/vscode": "1.108.1",
+    "@types/ws": "8.18.2",
     "@vscode/vsce": "4.1.0",
     "eslint": "10.13.0",
     "happy-dom": "21.0.4",
@@ -87,6 +88,8 @@
     "vitest": "5.0.5"
   },
   "dependencies": {
-    "lightweight-charts": "5.2.1"
+    "https-proxy-agent": "7.0.6",
+    "lightweight-charts": "5.2.1",
+    "ws": "8.22.0"
   }
 }

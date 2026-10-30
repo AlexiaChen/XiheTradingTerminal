@@ -1,5 +1,19 @@
 # 双图表引擎与开源选型
 
+## 1.0.0：同时展示与原生 Widget 行情
+
+用户要求主图与指标预览同时展示，并删除 Binance API。现在宽屏并排、窄栏上下；旧 engine 字段只保留兼容，workspace/chart/engine 缓存身份仍保持。主图只因明确配置变化或 Reload Main Chart 重建，预览选项不会破坏主图内部编辑。Reconnect Preview 只重连本地预览。
+
+行情由扩展宿主的 `WidgetFeed` 使用 ws + HTTPS 代理客户端匿名订阅 `widgetdata.tradingview.com`，无需 Chromium/CDP、账号、cookie或密钥。它是同一服务的独立订阅，不是跨域读取 iframe，也不是官方行情API。主图通过 tv.js 的 ready/getSymbolInfo/subscribeToQuote 消息报告实际标的和周期；预览跟随并显示实际来源/延迟。平移、十字线、画线不联动；主图未确认时明确显示跟随 Settings。
+
+主流请求1000根；选中指标声明辅助流，同源解析后逐流最多12000根，服务可返回更少。帧解码支持拆分/合并和心跳；索引修订替换历史；同根增量每秒合并传递。断线指数退避，静默超时45秒；恢复和重新显示重载历史。订阅ID隔离旧消息，隐藏/释放/重载关闭宿主连接。代理依次用VS Code http.proxy、HTTP(S)环境变量；远程/WSL环境的网络来自扩展宿主。
+
+源时区/时段保留，展示UTC。缺失量通过JSON保持null，在本地计算中为NaN；量依赖预设省略，外部JS会收到NaN。子周期按真实父周期起点分组，缺口和短交易时段不补零。Nomada Levels、S/R MTF、HTF PO3依赖固定UTC高周期边界，非24x7市场省略并说明。Widget 6h/8h回退时预览跟随实际周期；原Binance原生6h/8h路径已删除。
+
+只通过预览替身运行了当前构建的真实宿主行情代码和真实Widget，未下载/启动VS Code。最初CDP快照调研已由原生宿主连接实验取代，见[调研演进](../research/widget-data-bridge.md)。源码和图示目录见[单指标展示](../../built-in-indicator-showcase.md)。
+
+## 以下为0.0.x历史选型与行为（由1.0.0说明覆盖）
+
 ## 2026-10-30 选型
 
 用户要求主流开源、JS 指标和两个独立切换 Tab，保留原有配置和配色。

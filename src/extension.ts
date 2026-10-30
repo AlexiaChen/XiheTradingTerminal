@@ -12,6 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register the sidebar webview
   context.subscriptions.push(
+    provider,
     vscode.window.registerWebviewViewProvider(
       "xihe-trading-terminal.sidebar", // MUST match package.json
       provider,

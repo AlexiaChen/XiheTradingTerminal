@@ -20,7 +20,9 @@ with ZipFile(package) as archive:
         "extension/doc/assets/indicator-guide.png",
         "extension/doc/indicators.md",
         "extension/doc/pine-indicators.md",
+        "extension/doc/built-in-indicator-showcase.md",
         "extension/third-party/indicator-adaptations-NOTICE.txt",
+        "extension/third-party/widget-feed-NOTICE.txt",
         "extension/examples/indicators/ema-20.js",
         "extension/third-party/lightweight-charts-LICENSE.txt",
         "extension/third-party/lightweight-charts-NOTICE.txt",
@@ -30,14 +32,20 @@ with ZipFile(package) as archive:
     assert required <= names, f"Missing files: {required - names}"
     licenses = {
         "extension/third-party/indicator-adaptations-NOTICE.txt",
+        "extension/third-party/widget-feed-NOTICE.txt",
         "extension/third-party/fancy-canvas-LICENSE.txt",
         "extension/third-party/lightweight-charts-LICENSE.txt",
         "extension/third-party/lightweight-charts-NOTICE.txt",
     }
     assert {name for name in names if name.startswith("extension/third-party/") and not name.endswith("/")} == licenses, "Unexpected third-party reference files in VSIX"
+    for asset in (root / "doc/assets").rglob("*.png"):
+        relative = asset.relative_to(root).as_posix()
+        assert archive.read("extension/" + relative) == asset.read_bytes(), relative
     forbidden = ("extension/node_modules/", "extension/src/", "extension/test/",
                  "extension/.github/", "extension/doc/context/", "extension/.git/")
     assert not any(name.startswith(forbidden) or name.endswith((".vsix", ".map", ".pine", ".pinescript")) for name in names)
+    assert b"__vite-browser-external" not in archive.read("extension/out/extension.js"), "Node extension contains browser-only dependency stubs"
+    assert b"data-api.binance.vision" not in archive.read("extension/out/webview.js"), "Removed Binance transport remains in the Webview"
     packaged = json.loads(archive.read("extension/package.json"))
     for field in ("name", "displayName", "publisher", "version", "icon"):
         assert packaged[field] == manifest[field], field
@@ -50,7 +58,8 @@ with ZipFile(package) as archive:
         "doc/assets/lightweight-dark.png", "examples/indicators/ema-20.js",
         "doc/assets/builtin-indicators.png", "doc/indicators.md",
         "doc/assets/indicator-guide.png",
-        "doc/pine-indicators.md", "third-party/indicator-adaptations-NOTICE.txt",
+        "doc/built-in-indicator-showcase.md", "doc/pine-indicators.md", "third-party/indicator-adaptations-NOTICE.txt",
+        "third-party/widget-feed-NOTICE.txt",
         "third-party/lightweight-charts-LICENSE.txt", "third-party/lightweight-charts-NOTICE.txt",
         "third-party/fancy-canvas-LICENSE.txt",
     ):

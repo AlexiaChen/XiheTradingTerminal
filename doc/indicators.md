@@ -29,7 +29,7 @@ True range includes gaps: max of high−low, absolute high−previousClose and a
 
 | Preset | Formula and initialization | Reference |
 | --- | --- | --- |
-| Volume | Base-asset volume, mist-blue when close ≥ open and wheat-gold otherwise. | Binance candle volume |
+| Volume | Source volume units, mist-blue when close ≥ open and wheat-gold otherwise. | Resolved Widget source volume |
 | RSI 14 | Existing Wilder gain/loss averages; flat prices yield 50, loss-free rises 100 and gain-free falls 0. | [TradingView RSI](https://www.tradingview.com/support/solutions/43000502338-relative-strength-index-rsi/) |
 | MACD 12/26/9 | EMA12(close) − EMA26(close), EMA9 of that difference, and their histogram. Price EMAs and signal start at their first observation; MACD displays from bar 26, signal/histogram from bar 34. | [TradingView MACD](https://www.tradingview.com/support/solutions/43000502344-moving-average-convergence-divergence-macd/) |
 | Stochastic 14/3/3 | Raw %K from rolling high/low and close; SMA3 gives the plotted %K, another SMA3 gives %D. A zero-width price range yields 50. First %K at bar 16, %D at bar 18. | [TradingView Stochastic](https://www.tradingview.com/support/solutions/43000502332-stochastic-stoch/) |
@@ -42,9 +42,11 @@ Momentum is the endpoint of a 20-value linear regression on `close - average(mid
 
 ## Calculation and storage boundaries
 
-- Calculations use at most the latest 1,000 loaded Binance spot bars. EMA seeds, Wilder warm-up and chart-history length can produce differences from a website with more history.
+- Calculations use at most the latest 1,000 loaded Widget-source bars. EMA seeds, Wilder warm-up and chart-history length can produce differences from a website with more history.
 - Non-Fibonacci presets use current and previous bars only; regression tests check that appending future candles leaves past values unchanged. Values on the forming candle can change.
 - Optional presets start off, except migrated local Volume/RSI selections. Each chart saves its own list; copied charts get an independent list. An explicit empty list stays empty.
 - Widget study IDs remain separate from local selections. Checking a local preset does not modify or rebuild the cached Widget. Changing local chart configuration may rebuild the local instance.
 - Preset parameters are fixed and displayed in the picker for this release. The existing local JS-file interface remains available for custom formulas and parameters.
 - Each indicator has its own TS module under `src/indicators/builtin/`; `catalog.ts` contains metadata, `math.ts` common numerical primitives, and `builtin/index.ts` only registration.
+
+Screenshots grouped by category are in the [Built-in Indicator Showcase](built-in-indicator-showcase.md).

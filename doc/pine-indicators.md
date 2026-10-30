@@ -2,8 +2,7 @@
 
 Xihe includes 30 TypeScript presets adapted from the supplied Pine references,
 in addition to the 13 original optional presets. Each has its own algorithm file,
-organized by category. No Pine interpreter, transpiler, TradingView private API,
-or fork of Lightweight Charts is used. These are fixed, source-derived presets;
+organized by category. No Pine interpreter, transpiler, or fork of Lightweight Charts is used in the indicator calculations. The 1.0 preview data transport separately uses an undocumented Widget feed protocol. These are fixed, source-derived presets;
 they do **not** reproduce every input, alert, dashboard cell, or interaction of
 the original TradingView scripts, and numerical/visual parity with TradingView
 has not been established.
@@ -14,7 +13,7 @@ including hidden matches. Applied chips show the entire selection across
 categories. Hover, focus, or click a chip to read its guide; use its × to remove
 that indicator. MA90 and ZigZag remain mandatory. Source-derived markers, boxes,
 rails and fills are rendered directly on the native chart. They are available
-only on the Lightweight Charts engine.
+on the simultaneous Lightweight indicator preview. See the [classified screenshot showcase](built-in-indicator-showcase.md).
 
 The descriptions below combine the local source calculations with the authors'
 usage notes included at the end of the reference files. Colors follow explicit
@@ -25,16 +24,14 @@ body overlay. Dashboards use the terminal's colors and compact disclosure panels
 
 ## Shared boundaries
 
-- Main chart: latest 1,000 Binance spot candles, UTC, 15-second polling. History
-  seeds and confirmation can differ from a longer/different TradingView feed.
+- Preview: requests 1,000 candles from the hosted Widget service, displays UTC, and receives streamed updates. The server may return fewer bars. History seeds and confirmation can differ from a longer chart history. The actual resolved source and delay are visible.
 - Forming candles are provisional. Trendline Hold Rate, Swing Breakout Sequence,
   and the signal simulation evaluate closed bars. Origin pivots/boxes may be
   drawn retrospectively after confirmation; they were not known at the origin.
-- Auxiliary Binance streams are requested only for selected presets and cached
-  per chart. Requests paginate; each stream retains at most 12,000 candles.
+- Auxiliary Widget streams are subscribed only for selected presets, using the same resolved market as the main stream. Each retains at most 12,000 candles; server history can be shorter.
   Missing intrabars are never manufactured. Volume Delta shows covered bars only;
   Volume Profile Nodes requires its full selected window and otherwise explains
-  why it is omitted. Existing plots stay available when an auxiliary request fails.
+  why it is omitted. Groups are anchored to actual parent opens, but short sessions remain uncovered without complete intrabars. Missing volume is unavailable (NaN in user JS), not zero. Volume-dependent presets skip it. Fixed-UTC HTF PO3, S/R MTF and Nomada Levels are omitted for non-24x7 sessions; exchange-session alignment has not been implemented.
 - OHLCV delta/profile formulas in these sources are estimates. They do not prove
   institutional activity, aggressor buy/sell flow, or order-book liquidity.
 - Each preset retains at most 1,500 latest drawing objects, with an explicit note

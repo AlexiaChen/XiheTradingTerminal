@@ -21,7 +21,7 @@ export const BUILTIN_INDICATORS = [
   { id: "keltner", category: "trend", name: "Keltner Channels", parameters: "EMA 20 · Wilder ATR 10 × 2", pane: false },
   { id: "supertrend", category: "trend", name: "Supertrend", parameters: "Wilder ATR 10 × 3", pane: false },
   { id: "vwap", category: "volume-order-flow", name: "Session VWAP", parameters: "HLC3 · UTC day · intraday only", pane: false },
-  { id: "volume", category: "volume-order-flow", name: "Volume", parameters: "Base-asset volume", pane: true },
+  { id: "volume", category: "volume-order-flow", name: "Volume", parameters: "Source volume units", pane: true },
   { id: "rsi", category: "momentum", name: "RSI", parameters: "Wilder 14", pane: true },
   { id: "macd", category: "momentum", name: "MACD", parameters: "EMA 12 / 26 · signal EMA 9", pane: true },
   { id: "stochastic", category: "momentum", name: "Stochastic", parameters: "14 / 3 / 3", pane: true },

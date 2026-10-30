@@ -1,12 +1,19 @@
 import * as vscode from "vscode";
 import { DEFAULT_SYMBOL, LEGACY_STATE_KEY, MAX_INDICATOR_BYTES, normalizeState, STATE_KEY } from "./chartState";
+import { WidgetFeed } from "./marketData/widgetFeed";
+import { validFeedRequest } from "./marketData/widgetProtocol";
 
 export class TradingViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
+  private feed?: WidgetFeed;
+  private feedId?: string;
+
+  dispose() { this.feed?.dispose(); this.feed = undefined; this.feedId = undefined; }
 
   constructor(private readonly extensionUri: vscode.Uri, private readonly workspaceState: vscode.Memento) {}
 
   public reload(): void {
+    this.dispose();
     if (this.view) { this.view.webview.html = this.getHtml(this.view.webview); }
   }
 
@@ -14,8 +21,28 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
     view.webview.html = this.getHtml(view.webview);
+    view.onDidDispose?.(() => this.dispose());
+    view.onDidChangeVisibility?.(() => {
+      if (!view.visible) { this.dispose(); }
+      else { void view.webview.postMessage({ type: "previewResume" }); }
+    });
     view.webview.onDidReceiveMessage(async message => {
-      if (message?.type === "persist" && message.state) {
+      if (message?.type === "previewSubscribe") {
+        const request = validFeedRequest(message);
+        if (!request) {
+          if (typeof message.id === "string") { void view.webview.postMessage({ type: "previewFeed", id: message.id, event: { kind: "status", state: "error", message: "Unsupported preview symbol or timeframe. Use minute intervals, 1D or 1W; complex expressions and other resolutions are unavailable." } }); }
+          return;
+        }
+        if (view.visible === false) { return; }
+        this.dispose(); this.feedId = request.id;
+        const configuredProxy = vscode.workspace.getConfiguration?.("http").get<string>("proxy");
+        const proxy = configuredProxy || process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+        this.feed = new WidgetFeed(request, event => {
+          if (this.feedId === request.id) { void view.webview.postMessage({ type: "previewFeed", id: request.id, event }); }
+        }, { proxy });
+      } else if (message?.type === "previewStop") {
+        if (message.id === this.feedId) { this.dispose(); }
+      } else if (message?.type === "persist" && message.state) {
         await this.workspaceState.update(STATE_KEY, normalizeState(message.state));
       } else if (message?.type === "confirmRemoveWorkspace" && typeof message.workspaceId === "string") {
         const result = await vscode.window.showWarningMessage(
@@ -52,7 +79,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
 <head>
   <meta charset="UTF-8" />
   <title>XiheTradingTerminal</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} https://s3.tradingview.com; style-src ${webview.cspSource}; connect-src https://data-api.binance.vision; worker-src blob:; frame-src https://*.tradingview.com;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} https://s3.tradingview.com; style-src ${webview.cspSource}; connect-src 'none'; worker-src blob:; frame-src https://*.tradingview.com;" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${styles}" />
 </head>
@@ -66,9 +93,9 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       <button id="addWorkspace" class="tv-btn" type="button">+ Workspace</button>
       <button id="closeWorkspace" class="tv-btn" type="button" title="Remove workspace">Remove</button>
     </div>
-    <div class="engine-tabs" role="tablist" aria-label="Chart engine">
-      <button id="widgetEngine" role="tab" aria-selected="true" aria-controls="container" type="button">TradingView Widget</button>
-      <button id="lightweightEngine" role="tab" aria-selected="false" aria-controls="container" type="button">Lightweight Charts</button>
+    <div class="comparison-heading">
+      <span>TRADINGVIEW + INDICATOR PREVIEW</span>
+      <span id="followStatus" role="status">Following saved symbol and interval</span>
     </div>
     <div class="control-bar">
       <div class="tabs" id="tabs" aria-label="Chart tabs"></div>
@@ -107,10 +134,11 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div class="chart-caption">
       <span>ZigZag (5%, 10) · MA (90)</span><span class="direction-key">Blue ↑ / Gold ↓</span>
-      <button id="retryChart" class="chart-retry" type="button" title="Recreate only this chart. Unsaved edits inside this chart will be lost.">Retry Chart</button>
+      <button id="retryChart" class="chart-retry" type="button" title="Reconnect the indicator preview. The main chart stays open.">Reconnect Preview</button>
+      <button id="reloadWidget" class="chart-retry" type="button" title="Recreate the main chart. Unsaved edits inside it will be lost.">Reload Main Chart</button>
     </div>
     <div id="chartNotice" class="chart-notice" role="status" hidden></div>
-    <div id="localTools" class="local-tools" hidden>
+    <div id="localTools" class="local-tools">
       <div id="builtinPicker" class="builtin-picker">
         <button id="builtinToggle" class="tv-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="builtinDropdown">Built-in Indicators <span id="builtinCount"></span> ▾</button>
         <div id="builtinDropdown" class="builtin-dropdown" role="dialog" aria-label="Built-in indicators" hidden>
@@ -126,11 +154,20 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
       </div>
       <button id="loadIndicator" class="tv-btn" type="button">Load JS Indicator</button>
       <span id="customIndicators" class="indicator-list"></span>
-      <span class="local-help">Binance spot · JavaScript indicators · no Pine Script</span>
+      <span class="local-help">Preview indicators · Widget market data · JavaScript, no Pine Script</span>
       <div id="builtinSelected" class="builtin-selected"></div>
     </div>
     <div id="intervalWarning" class="interval-warning" role="status" hidden>TradingView may fall back to 1D for 6h / 8h. Check the interval inside the chart.</div>
-    <div class="chart-shell"><div id="container" role="tabpanel" aria-labelledby="widgetEngine"></div></div>
+    <div class="comparison-charts">
+      <section class="chart-panel" aria-label="TradingView main chart">
+        <div class="panel-heading"><strong>TradingView · Main</strong><span>Hosted chart &amp; drawing tools</span></div>
+        <div class="chart-shell"><div id="container"></div></div>
+      </section>
+      <section class="chart-panel" aria-label="Local indicator preview">
+        <div class="panel-heading"><strong>Lightweight · Indicator Preview</strong><span>Same Widget feed · local calculations</span></div>
+        <div class="chart-shell"><div id="previewContainer"></div></div>
+      </section>
+    </div>
   </div>
   <div id="renameDialog" class="rename-overlay" role="dialog" aria-modal="true" aria-labelledby="renameTitle" hidden>
     <form id="renameForm" class="rename-card">

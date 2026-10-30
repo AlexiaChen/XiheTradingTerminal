@@ -92,7 +92,7 @@ export function indexAt(bars: Candle[], time: number): number {
   return low;
 }
 
-/** UTC boundaries match the Binance spot feed, including Monday-anchored weeks. */
+/** UTC aggregation boundaries, including Monday-anchored weeks; not an exchange-session calendar. */
 export function bucket(time: number, seconds: number) {
   const offset = seconds === 604800 ? 345600 : 0;
   return Math.floor((time - offset) / seconds) * seconds + offset;
