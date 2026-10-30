@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<title>XiheTradingTerminal — 未济</title>
+<desc>Hexagram 64: fire above water. Forty-nine dots on a fifty-position ring leave one empty position.</desc>
+<rect width="256" height="256" rx="40" fill="#1d2021"/>
+<rect x="7" y="7" width="242" height="242" rx="34" fill="none" stroke="#504945"/>
+<g id="forty-nine" fill="#928374">
+<circle cx="141.160" cy="23.828" r="2"/>
+<circle cx="154.112" cy="26.299" r="2"/>
+<circle cx="166.653" cy="30.373" r="2"/>
+<circle cx="178.584" cy="35.988" r="2"/>
+<circle cx="189.717" cy="43.053" r="2"/>
+<circle cx="199.877" cy="51.458" r="2"/>
+<circle cx="208.904" cy="61.070" r="2"/>
+<circle cx="216.654" cy="71.738" r="2"/>
+<circle cx="223.007" cy="83.293" r="2"/>
+<circle cx="227.861" cy="95.553" r="2"/>
+<circle cx="231.140" cy="108.325" r="2"/>
+<circle cx="232.793" cy="121.407" r="2"/>
+<circle cx="232.793" cy="134.593" r="2"/>
+<circle cx="231.140" cy="147.675" r="2"/>
+<circle cx="227.861" cy="160.447" r="2"/>
+<circle cx="223.007" cy="172.707" r="2"/>
+<circle cx="216.654" cy="184.262" r="2"/>
+<circle cx="208.904" cy="194.930" r="2"/>
+<circle cx="199.877" cy="204.542" r="2"/>
+<circle cx="189.717" cy="212.947" r="2"/>
+<circle cx="178.584" cy="220.012" r="2"/>
+<circle cx="166.653" cy="225.627" r="2"/>
+<circle cx="154.112" cy="229.701" r="2"/>
+<circle cx="141.160" cy="232.172" r="2"/>
+<circle cx="128.000" cy="233.000" r="2"/>
+<circle cx="114.840" cy="232.172" r="2"/>
+<circle cx="101.888" cy="229.701" r="2"/>
+<circle cx="89.347" cy="225.627" r="2"/>
+<circle cx="77.416" cy="220.012" r="2"/>
+<circle cx="66.283" cy="212.947" r="2"/>
+<circle cx="56.123" cy="204.542" r="2"/>
+<circle cx="47.096" cy="194.930" r="2"/>
+<circle cx="39.346" cy="184.262" r="2"/>
+<circle cx="32.993" cy="172.707" r="2"/>
+<circle cx="28.139" cy="160.447" r="2"/>
+<circle cx="24.860" cy="147.675" r="2"/>
+<circle cx="23.207" cy="134.593" r="2"/>
+<circle cx="23.207" cy="121.407" r="2"/>
+<circle cx="24.860" cy="108.325" r="2"/>
+<circle cx="28.139" cy="95.553" r="2"/>
+<circle cx="32.993" cy="83.293" r="2"/>
+<circle cx="39.346" cy="71.738" r="2"/>
+<circle cx="47.096" cy="61.070" r="2"/>
+<circle cx="56.123" cy="51.458" r="2"/>
+<circle cx="66.283" cy="43.053" r="2"/>
+<circle cx="77.416" cy="35.988" r="2"/>
+<circle cx="89.347" cy="30.373" r="2"/>
+<circle cx="101.888" cy="26.299" r="2"/>
+<circle cx="114.840" cy="23.828" r="2"/>
+</g>
+<g id="weiji" fill="#d79921">
+<rect x="64" y="59" width="128" height="10"/>
+<rect x="64" y="83" width="48" height="10"/>
+<rect x="144" y="83" width="48" height="10"/>
+<rect x="64" y="107" width="128" height="10"/>
+</g>
+<g fill="#83a598">
+<rect x="64" y="139" width="48" height="10"/>
+<rect x="144" y="139" width="48" height="10"/>
+<rect x="64" y="163" width="128" height="10"/>
+<rect x="64" y="187" width="48" height="10"/>
+<rect x="144" y="187" width="48" height="10"/>
+</g>
+</svg>

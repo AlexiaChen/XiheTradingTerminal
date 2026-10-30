@@ -60,6 +60,16 @@ function rename(name: string) {
 beforeEach(() => { vi.resetModules(); vi.unstubAllGlobals(); });
 
 describe("terminal Webview interactions", () => {
+  it("can create charts and workspaces when randomUUID is unavailable", async () => {
+    const getRandomValues = crypto.getRandomValues.bind(crypto);
+    vi.stubGlobal("crypto", { getRandomValues });
+    const page = await mount();
+    click("#addTab");
+    expect(activeWorkspace(page.state()).tabs).toHaveLength(2);
+    click("#addWorkspace");
+    expect(page.state().workspaces).toHaveLength(2);
+  });
+
   it("keeps the same widget and internal indicator edits when switching charts", async () => {
     const page = await mount();
     page.instances[0].customIndicators.push("custom MA settings");
@@ -89,7 +99,7 @@ describe("terminal Webview interactions", () => {
     expect(page.state().workspaces).toHaveLength(2);
     change("#symbolInput", "BINANCE:BTCUSDT");
     change("#workspaceSelect", firstId);
-    expect(activeTab(page.state()).symbol).toBe("BINANCE:SOLUSDT");
+    expect(activeTab(page.state()).symbol).toBe("BINANCE:ETHUSDT");
     expect(page.instances[0].remove).not.toHaveBeenCalled();
     expect(document.getElementById(page.instances[0].options.container_id)!.hidden).toBe(false);
   });
@@ -122,8 +132,9 @@ describe("terminal Webview interactions", () => {
     expect(document.querySelector<HTMLElement>("#intervalWarning")!.hidden).toBe(false);
     change("#intervalSelect", "60");
     expect(document.querySelector<HTMLElement>("#intervalWarning")!.hidden).toBe(true);
+    expect(document.querySelector("#toggleSettings")!.textContent).toBe("Show Settings");
     click("#toggleSettings");
-    expect(page.saved().ui.isToolbarCollapsed).toBe(true);
+    expect(page.saved().ui.isToolbarCollapsed).toBe(false);
   });
 
   it("escapes injected state and renders rename text without HTML execution", async () => {

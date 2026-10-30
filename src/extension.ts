@@ -3,7 +3,7 @@ import { TradingViewProvider } from "./tradingViewProvider";
 
 export function activate(context: vscode.ExtensionContext) {
   // 🔍 Proof of activation (check DevTools console)
-  console.log("✅ TradingView Sidebar extension activated");
+  console.log("✅ XiheTradingTerminal extension activated");
 
   const provider = new TradingViewProvider(
     context.extensionUri,
@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register the sidebar webview
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      "tradingview.sidebar", // MUST match package.json
+      "xihe-trading-terminal.sidebar", // MUST match package.json
       provider,
       {
         webviewOptions: {
@@ -25,10 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Optional: reload command (useful for debugging)
   context.subscriptions.push(
-    vscode.commands.registerCommand("tradingview.reload", () => {
-      console.log("🔄 TradingView reload command executed");
+    vscode.commands.registerCommand("xihe-trading-terminal.reload", () => {
+      console.log("🔄 XiheTradingTerminal reload command executed");
       provider.reload();
-      vscode.window.showInformationMessage("TradingView sidebar reloaded");
+      vscode.window.showInformationMessage("XiheTradingTerminal reloaded");
     })
   );
 }

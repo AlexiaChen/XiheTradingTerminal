@@ -1,10 +1,10 @@
 {
-  "name": "tradingview",
-  "displayName": "TradingView Sidebar",
-  "description": "TradingView charts in the VS Code sidebar with tabbed layouts, indicator presets, and collapsible controls.",
+  "name": "xihe-trading-terminal",
+  "displayName": "XiheTradingTerminal",
+  "description": "A personal Gruvbox chart terminal for VS Code, with named workspaces, persistent chart tabs, ZigZag and MA presets.",
   "version": "0.0.2",
-  "publisher": "farbodghasemlu",
-  "repository": "https://github.com/farbodghasemlu/tradingview-vscode.git",
+  "publisher": "AlexiaChen",
+  "repository": "https://github.com/AlexiaChen/XiheTradingTerminal.git",
   "engines": {
     "vscode": "^1.108.1",
     "node": ">=24"
@@ -14,43 +14,45 @@
     "Other"
   ],
   "keywords": [
+    "xihe",
+    "trading-terminal",
+    "gruvbox",
     "tradingview",
     "chart",
     "crypto",
     "stocks",
-    "technical-analysis",
-    "sidebar"
+    "technical-analysis"
   ],
   "activationEvents": [
-    "onView:tradingview.sidebar",
-    "onCommand:tradingview.reload"
+    "onView:xihe-trading-terminal.sidebar",
+    "onCommand:xihe-trading-terminal.reload"
   ],
-  "icon": "media/tw.png",
+  "icon": "media/xihe.png",
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "tradingview",
-          "title": "TradingView",
+          "id": "xihe-trading-terminal",
+          "title": "XiheTradingTerminal",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "tradingview": [
+      "xihe-trading-terminal": [
         {
-          "id": "tradingview.sidebar",
-          "name": "Chart",
+          "id": "xihe-trading-terminal.sidebar",
+          "name": "Chart Workspace",
           "type": "webview"
         }
       ]
     },
     "commands": [
       {
-        "command": "tradingview.reload",
+        "command": "xihe-trading-terminal.reload",
         "title": "Reload Sidebar",
-        "category": "TradingView"
+        "category": "XiheTradingTerminal"
       }
     ]
   },

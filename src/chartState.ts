@@ -15,7 +15,10 @@ export type TradingViewState = {
   ui: { isToolbarCollapsed: boolean };
 };
 
-export const STATE_KEY = "tradingview.state";
+export const STATE_KEY = "xihe-trading-terminal.state";
+export const LEGACY_STATE_KEY = "tradingview.state";
+export const DEFAULT_SYMBOL = "BINANCE:ETHUSDT";
+export const DEFAULT_INTERVAL = "240";
 export const REQUIRED_STUDIES = ["ZigZag@tv-basicstudies", "MASimple@tv-basicstudies"];
 
 export function normalizeStudies(raw: unknown): string[] {
@@ -24,7 +27,7 @@ export function normalizeStudies(raw: unknown): string[] {
 }
 
 export function createTab(id: string, name = "Main"): ChartTab {
-  return { id, name, symbol: "BINANCE:SOLUSDT", interval: "15", studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC" };
+  return { id, name, symbol: DEFAULT_SYMBOL, interval: DEFAULT_INTERVAL, studies: [...REQUIRED_STUDIES], theme: "dark", timezone: "Etc/UTC" };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -57,8 +60,8 @@ export function normalizeState(raw: unknown): TradingViewState {
       return {
         id: uniqueId(tab.id, `tab-${tabIndex + 1}`, tabIds),
         name: text(tab.name, tabIndex === 0 ? "Main" : `Chart ${tabIndex + 1}`),
-        symbol: text(tab.symbol, "BINANCE:SOLUSDT").toUpperCase(),
-        interval: typeof tab.interval === "string" || typeof tab.interval === "number" ? String(tab.interval) : "15",
+        symbol: text(tab.symbol, DEFAULT_SYMBOL).toUpperCase(),
+        interval: typeof tab.interval === "string" || typeof tab.interval === "number" ? String(tab.interval) : DEFAULT_INTERVAL,
         studies: normalizeStudies(tab.studies),
         theme: tab.theme === "light" ? "light" : "dark",
         timezone: text(tab.timezone, "Etc/UTC")
@@ -73,10 +76,11 @@ export function normalizeState(raw: unknown): TradingViewState {
     };
   });
   if (!workspaces.length) { return normalizeState(undefined); }
+  const collapsed = record(candidate.ui).isToolbarCollapsed;
   return {
     workspaces,
     activeWorkspaceId: workspaces.some(workspace => workspace.id === candidate.activeWorkspaceId) ? candidate.activeWorkspaceId as string : workspaces[0].id,
-    ui: { isToolbarCollapsed: record(candidate.ui).isToolbarCollapsed === true }
+    ui: { isToolbarCollapsed: typeof collapsed === "boolean" ? collapsed : true }
   };
 }
 

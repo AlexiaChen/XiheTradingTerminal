@@ -1,4 +1,8 @@
-# TradingView Sidebar
+# XiheTradingTerminal
+
+<img src="media/xihe.png" alt="XiheTradingTerminal: Weiji hexagram with forty-nine points and one empty position" width="96" align="right" />
+
+Named after **Xihe (羲和)**, the solar goddess associated with time and celestial cycles. The mark is **Weiji (未济), Hexagram 64**: fire above water. Its forty-nine dots occupy a fifty-position ring, leaving one gap.
 
 A chart workspace for VS Code, with named workspaces, independent chart tabs, and a warm Gruvbox palette. Keep market charts beside your code without rebuilding your indicator setup every time you switch tabs.
 
@@ -8,6 +12,7 @@ A chart workspace for VS Code, with named workspaces, independent chart tabs, an
 
 - **Named workspaces:** group charts by market, strategy, or trading session. Create, switch, rename, and remove workspaces inside the sidebar.
 - **Independent chart tabs:** rename charts with the pencil button or a double-click. Each tab keeps its symbol, interval, theme, and additional indicators.
+- **Start with ETH / 4H:** new workspaces open `BINANCE:ETHUSDT` at four-hour resolution, with Settings collapsed by default. Existing saved configurations are retained.
 - **Indicators ready on open:** every new chart includes **ZigZag (5% deviation, depth 10)** and **Simple Moving Average (90)**. Existing saved indicators are retained when migrating older settings.
 - **Keep charts alive:** switching tabs or workspaces reuses the existing TradingView iframe, preserving indicator adjustments made inside that chart during the session.
 - **Gruvbox Dark and Light:** mist-blue up candles (`#83a598`), wheat-gold down candles (`#d79921`), and matching candle borders, wicks, and backgrounds. The palette follows the sibling `kline-trainer` project.
@@ -39,15 +44,17 @@ The packaging tool, `@vscode/vsce`, is installed as a local development dependen
 The installer is written to:
 
 ```text
-dist/tradingview-0.0.2.vsix
+dist/xihe-trading-terminal-0.0.2.vsix
 ```
+
+Extension ID: `AlexiaChen.xihe-trading-terminal`. This renamed extension has a separate identity from the original TradingView Sidebar; its saved settings are not automatically shared with that extension.
 
 In your host machine's VS Code:
 
 1. Open **Extensions**.
 2. Select **… → Install from VSIX…**.
 3. Select the generated `.vsix` file, install it, and reload VS Code if prompted.
-4. Open the **TradingView** icon in the Activity Bar.
+4. Open the **XiheTradingTerminal** icon in the Activity Bar.
 
 If you build in WSL and use VS Code on Windows, select the file from the host VS Code installation dialog and install it in the local extension environment.
 
@@ -59,7 +66,7 @@ If you build in WSL and use VS Code on Windows, select the file from the host VS
 4. Choose an interval and a Gruvbox theme. ZigZag and MA 90 are included automatically; use **Additional indicators** for supported built-in IDs, such as `RSI@tv-basicstudies`.
 5. Use **Hide Settings** to maximize the chart. At least one workspace and one chart are retained.
 
-**TradingView: Reload Sidebar** rebuilds the view from saved configuration. Its command ID is `tradingview.reload`.
+**XiheTradingTerminal: Reload Sidebar** rebuilds the view from saved configuration. Its command ID is `xihe-trading-terminal.reload`.
 
 ## TradingView capabilities and limits
 
@@ -84,7 +91,7 @@ npm run package          # build a VSIX, without running tests
 
 Press **F5 → Run Extension** to try the extension in your installed VS Code. Automated checks run offline and do not download or launch a separate VS Code installation.
 
-GitHub Actions runs on pushes, pull requests, and manual dispatch. It installs locked dependencies, runs offline checks and tests, packages the extension, verifies the VSIX contents, and uploads a **tradingview-vsix** artifact. It does not publish to the Marketplace.
+GitHub Actions runs on pushes, pull requests, and manual dispatch. It installs locked dependencies, runs offline checks and tests, packages the extension, verifies the VSIX contents, and uploads a **xihe-trading-terminal-vsix** artifact. It does not publish to the Marketplace.
 
 `node_modules/`, `out/`, `dist/`, downloaded test installations, and VSIX files are generated locally and excluded from Git. The VSIX includes the compiled extension, Webview JavaScript/CSS, media, README, changelog, license, and screenshots.
 

@@ -12,6 +12,7 @@ with ZipFile(package) as archive:
         "extension/package.json", "extension/out/extension.js",
         "extension/out/webview.js", "extension/readme.md",
         "extension/out/webview.css",
+        "extension/media/xihe.png", "extension/media/icon.svg",
         "extension/doc/assets/gruvbox-dark.png",
         "extension/doc/assets/gruvbox-light.png",
         "extension.vsixmanifest", "[Content_Types].xml",
@@ -21,8 +22,14 @@ with ZipFile(package) as archive:
                  "extension/.github/", "extension/doc/context/", "extension/.git/")
     assert not any(name.startswith(forbidden) or name.endswith((".vsix", ".map")) for name in names)
     packaged = json.loads(archive.read("extension/package.json"))
-    assert packaged["version"] == manifest["version"]
+    for field in ("name", "displayName", "publisher", "version", "icon"):
+        assert packaged[field] == manifest[field], field
+    assert "extension/media/tw.png" not in names
     assert packaged["main"] == "./out/extension.js"
-    for filename in ("out/extension.js", "out/webview.js", "out/webview.css"):
+    for filename in (
+        "out/extension.js", "out/webview.js", "out/webview.css",
+        "media/xihe.png", "media/icon.svg",
+        "doc/assets/gruvbox-dark.png", "doc/assets/gruvbox-light.png",
+    ):
         assert archive.read(f"extension/{filename}") == (root / filename).read_bytes(), filename
-print(f"PASS: {package.name}: entry points, version, screenshots, exact bundles, no dependencies/source/tests")
+print(f"PASS: {package.name}: identity, entry points, exact bundles/icons/screenshots, no dependencies/source/tests")

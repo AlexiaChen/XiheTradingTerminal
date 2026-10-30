@@ -1,7 +1,11 @@
 # Change Log
 
-## [0.0.2] - 2026-10-29
+## [0.0.2] - 2026-10-30
 
+- Start new workspaces with ETHUSDT / 4H and Settings collapsed; preserve saved configurations.
+- Added a custom Weiji (Hexagram 64) icon, with forty-nine points and one empty position.
+- Rebranded the project and extension as XiheTradingTerminal (羲和), with an independent extension ID and the renamed GitHub repository.
+- Correct the hosted ZigZag deviation input name so the explicit 5% preset is applied.
 - Added named chart workspaces and chart-tab renaming, with migration of the original saved tabs.
 - Keep chart instances alive when switching tabs/workspaces so in-session indicator adjustments remain intact.
 - Include ZigZag (5%, 10) and Simple Moving Average (90) on every new chart; preserve existing additional indicators.

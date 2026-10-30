@@ -1,6 +1,6 @@
 # K 线周期
 
-工具栏支持请求 1m/5m/15m/30m/1h/4h/6h/8h/1D/1W，对应 1/5/15/30/60/240/360/480/D/W 字符串。默认 15m。
+工具栏支持请求 1m/5m/15m/30m/1h/4h/6h/8h/1D/1W，对应 1/5/15/30/60/240/360/480/D/W 字符串。默认 4H（240）。
 
 选项 HTML 在 src/tradingViewProvider.ts；前端 change 事件在 src/webview/main.ts 更新当前标签并保存，theme.ts/widgetOptions 将 interval 原样传给官方 widget。
 

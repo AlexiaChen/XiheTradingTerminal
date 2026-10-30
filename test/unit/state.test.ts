@@ -6,7 +6,9 @@ describe("workspace state", () => {
   it("creates fresh defaults with mandatory indicators", () => {
     const state = normalizeState(undefined);
     expect(state.workspaces).toHaveLength(1);
-    expect(activeTab(state)).toMatchObject({ interval: "15", theme: "dark", studies: REQUIRED_STUDIES });
+    expect(activeTab(state)).toMatchObject({ symbol: "BINANCE:ETHUSDT", interval: "240", theme: "dark", studies: REQUIRED_STUDIES });
+    expect(state.ui.isToolbarCollapsed).toBe(true);
+    expect(normalizeState({ ui: { isToolbarCollapsed: false } }).ui.isToolbarCollapsed).toBe(false);
   });
 
   it("migrates old tabs without losing independent indicators or configuration", () => {
@@ -46,7 +48,7 @@ describe("hosted widget configuration", () => {
   it.each(["dark", "light"] as const)("sets default indicator inputs and Gruvbox %s colors", theme => {
     const options = widgetOptions({ ...activeTab(normalizeState(undefined)), theme }, "test");
     expect(options.studies).toEqual(REQUIRED_STUDIES);
-    expect(options.studies_overrides).toMatchObject({ "moving average.length": 90, "zigzag.deviation": 5, "zigzag.depth": 10 });
+    expect(options.studies_overrides).toMatchObject({ "moving average.length": 90, "zigzag.deviation (%)": 5, "zigzag.depth": 10 });
     for (const property of ["upColor", "borderUpColor", "wickUpColor"]) {
       expect(options.overrides[property === "upColor" ? "mainSeriesProperties.candleStyle.upColor" : `mainSeriesProperties.candleStyle.${property}` as keyof typeof options.overrides]).toBe("#83a598");
     }

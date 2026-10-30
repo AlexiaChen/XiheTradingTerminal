@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
       lib: {
         entry: fileURLToPath(new URL(webview ? "./src/webview/main.ts" : "./src/extension.ts", import.meta.url)),
         formats: [webview ? "iife" : "cjs"],
-        name: webview ? "TradingViewSidebar" : undefined,
+        name: webview ? "XiheTradingTerminal" : undefined,
         cssFileName: "webview",
         fileName: () => webview ? "webview.js" : "extension.js"
       },

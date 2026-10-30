@@ -1,4 +1,4 @@
-import { activeTab, activeWorkspace, createTab, normalizeState, normalizeStudies, REQUIRED_STUDIES } from "../chartState";
+import { activeTab, activeWorkspace, createTab, DEFAULT_SYMBOL, normalizeState, normalizeStudies, REQUIRED_STUDIES } from "../chartState";
 import type { TradingViewState } from "../chartState";
 import { widgetOptions } from "../theme";
 import { ChartCache } from "./chartCache";
@@ -51,6 +51,12 @@ function button(label: string, className: string, action: () => void) {
   node.textContent = label;
   node.addEventListener("click", action);
   return node;
+}
+
+function newId(): string {
+  if (typeof crypto.randomUUID === "function") { return crypto.randomUUID(); }
+  // randomUUID requires a secure origin; getRandomValues also works in standalone previews.
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), value => value.toString(16).padStart(2, "0")).join("");
 }
 
 function render() {
@@ -149,8 +155,8 @@ renameDialog.addEventListener("keydown", event => {
 element("renameWorkspace").addEventListener("click", () => openRename("workspace"));
 workspaceSelect.addEventListener("change", () => { state.activeWorkspaceId = workspaceSelect.value; persist(); render(); });
 element("addWorkspace").addEventListener("click", () => {
-  const id = crypto.randomUUID();
-  const tab = createTab(crypto.randomUUID());
+  const id = newId();
+  const tab = createTab(newId());
   state.workspaces.push({ id, name: `Workspace ${state.workspaces.length + 1}`, tabs: [tab], activeTabId: tab.id });
   state.activeWorkspaceId = id;
   persist(); render();
@@ -172,12 +178,12 @@ window.addEventListener("message", event => {
 element("addTab").addEventListener("click", () => {
   const workspace = activeWorkspace(state);
   const base = activeTab(state);
-  const tab = { ...base, id: crypto.randomUUID(), name: `Chart ${workspace.tabs.length + 1}`, studies: [...base.studies] };
+  const tab = { ...base, id: newId(), name: `Chart ${workspace.tabs.length + 1}`, studies: [...base.studies] };
   workspace.tabs.push(tab); workspace.activeTabId = tab.id;
   persist(); render();
 });
 element("toggleSettings").addEventListener("click", () => { state.ui.isToolbarCollapsed = !state.ui.isToolbarCollapsed; persist(); render(); });
-symbolInput.addEventListener("change", () => { activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT"; persist(); render(); });
+symbolInput.addEventListener("change", () => { activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || DEFAULT_SYMBOL; persist(); render(); });
 intervalSelect.addEventListener("change", () => { activeTab(state).interval = intervalSelect.value; persist(); render(); });
 studiesInput.addEventListener("change", () => { activeTab(state).studies = normalizeStudies(studiesInput.value.split(",")); persist(); render(); });
 for (const node of element("themeToggle").querySelectorAll<HTMLButtonElement>("button")) {
@@ -185,7 +191,7 @@ for (const node of element("themeToggle").querySelectorAll<HTMLButtonElement>("b
 }
 // Save edited text before VS Code hides/disposes the page, without recreating a chart.
 function flushInputs() {
-  activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || "BINANCE:SOLUSDT";
+  activeTab(state).symbol = symbolInput.value.trim().toUpperCase() || DEFAULT_SYMBOL;
   activeTab(state).studies = normalizeStudies(studiesInput.value.split(","));
   persist();
 }

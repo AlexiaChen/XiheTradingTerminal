@@ -16,7 +16,7 @@ src/webview/main.ts → Vite IIFE → out/webview.js
   └── theme.ts/widgetOptions → new TradingView.widget
 ```
 
-视图 ID 为 `tradingview.sidebar`，Activity Bar 容器 ID 为 `tradingview`，重载命令为 `tradingview.reload`。隐藏 Webview 时保留上下文。
+视图 ID 为 `xihe-trading-terminal.sidebar`，Activity Bar 容器 ID 为 `xihe-trading-terminal`，重载命令为 `xihe-trading-terminal.reload`。隐藏 Webview 时保留上下文。
 
 图表缓存按 `(workspaceId, tabId)` 区分实例，只有 symbol/interval/studies/theme/timezone 变化时才重建对应实例。名称、当前选择和折叠状态不参与配置指纹。未激活图表通过 hidden 隐藏；关闭图表/工作区时清理相关 DOM 和可用的 widget remove 方法。保留实例会增加打开过的图表占用，当前不做会导致状态丢失的自动淘汰。
 

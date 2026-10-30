@@ -46,6 +46,7 @@
 
 @layer components {
   #app { @apply flex h-screen flex-col gap-2.5 bg-tv-bg p-2.5 max-[700px]:p-2; }
+  .terminal-brand { @apply mr-1 text-xs font-semibold tracking-[0.2em] text-tv-accent; }
   .workspace-bar { @apply flex flex-wrap items-center gap-2; }
   .workspace-bar label { @apply text-[10px] tracking-[0.14em] text-tv-muted; }
   .workspace-bar select { @apply min-w-32 max-w-64 flex-1; }

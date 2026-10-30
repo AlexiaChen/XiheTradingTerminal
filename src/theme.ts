@@ -26,7 +26,7 @@ export function widgetOptions(tab: ChartTab, containerId: string) {
     studies_overrides: {
       "volume.volume.color.0": down, "volume.volume.color.1": up,
       "moving average.length": 90,
-      "zigzag.deviation": 5, "zigzag.depth": 10
+      "zigzag.deviation (%)": 5, "zigzag.depth": 10
     }
   };
 }

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { normalizeState, STATE_KEY } from "./chartState";
+import { DEFAULT_SYMBOL, LEGACY_STATE_KEY, normalizeState, STATE_KEY } from "./chartState";
 
 export class TradingViewProvider implements vscode.WebviewViewProvider {
   private view?: vscode.WebviewView;
@@ -30,13 +30,15 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
 
   private getHtml(webview: vscode.Webview): string {
     const nonce = getNonce();
-    const state = JSON.stringify(normalizeState(this.workspaceState.get(STATE_KEY))).replace(/</g, "\\u003c");
+    const initial = normalizeState(this.workspaceState.get(STATE_KEY) ?? this.workspaceState.get(LEGACY_STATE_KEY));
+    const state = JSON.stringify(initial).replace(/</g, "\\u003c");
     const script = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "out", "webview.js"));
     const styles = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "out", "webview.css"));
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>XiheTradingTerminal</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; script-src 'nonce-${nonce}' ${webview.cspSource} https://s3.tradingview.com; style-src ${webview.cspSource}; frame-src https://*.tradingview.com;" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="${styles}" />
@@ -44,6 +46,7 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
 <body data-theme="dark">
   <div id="app">
     <div class="workspace-bar">
+      <span class="terminal-brand">XIHE</span>
       <label for="workspaceSelect">WORKSPACE</label>
       <select id="workspaceSelect" class="tv-select" aria-label="Workspace"></select>
       <button id="renameWorkspace" class="tv-btn" type="button" title="Rename workspace">Rename</button>
@@ -53,15 +56,15 @@ export class TradingViewProvider implements vscode.WebviewViewProvider {
     <div class="control-bar">
       <div class="tabs" id="tabs" aria-label="Chart tabs"></div>
       <div class="top-actions">
-        <button class="tv-btn" id="toggleSettings" aria-expanded="true" type="button">Hide Settings</button>
+        <button class="tv-btn" id="toggleSettings" aria-expanded="${!initial.ui.isToolbarCollapsed}" type="button">${initial.ui.isToolbarCollapsed ? "Show Settings" : "Hide Settings"}</button>
         <button class="tv-btn" id="addTab" type="button">+ Chart</button>
         <span class="status-pill" id="status">Workspace synced</span>
       </div>
     </div>
-    <div class="toolbar" id="toolbar" aria-label="Chart settings">
+    <div class="toolbar${initial.ui.isToolbarCollapsed ? " collapsed" : ""}" id="toolbar" aria-label="Chart settings"${initial.ui.isToolbarCollapsed ? " inert" : ""}>
       <div class="stack">
         <label for="symbolInput">Symbol (exchange:ticker)</label>
-        <input id="symbolInput" class="tv-input" placeholder="BINANCE:SOLUSDT" autocomplete="off" />
+        <input id="symbolInput" class="tv-input" placeholder="${DEFAULT_SYMBOL}" autocomplete="off" />
       </div>
       <div class="stack">
         <label for="intervalSelect">Interval</label>
